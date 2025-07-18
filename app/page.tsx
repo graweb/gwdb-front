@@ -30,6 +30,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 
 export default function Page() {
@@ -81,22 +86,32 @@ export default function Page() {
           />
           <Breadcrumb>
             <BreadcrumbList>
-              <Button
-                disabled={!connection?.connection_name}
-                variant="outline"
-                size="icon"
-                className="size-8 cursor-pointer"
-                onClick={handleExecuteQuery}
-              >
-                <Play />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="size-8 cursor-pointer"
-              >
-                <FileCode2 />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    disabled={!connection?.connection_name}
+                    variant="outline"
+                    size="icon"
+                    className="size-8 cursor-pointer"
+                    onClick={handleExecuteQuery}
+                  >
+                    <Play />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Executar</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="size-8 cursor-pointer"
+                  >
+                    <FileCode2 />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Abrir</TooltipContent>
+              </Tooltip>
               <BreadcrumbItem className="hidden md:block">
                 <BreadcrumbLink href="#">All Inboxes</BreadcrumbLink>
               </BreadcrumbItem>
@@ -112,9 +127,9 @@ export default function Page() {
           </Breadcrumb>
         </header>
 
-        <div className="flex-1 flex flex-col p-2 gap-2 h-[calc(100vh-64px)]">
+        <div className="flex flex-col p-2 gap-2 h-[calc(100vh-64px)]">
           {/* Editor */}
-          <div className="flex-1 min-h-[300px] border rounded-md overflow-hidden">
+          <div className="min-h-[300px] border rounded-md overflow-hidden">
             <Editor
               height="100%"
               defaultLanguage="sql"

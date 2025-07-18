@@ -4,7 +4,25 @@ import React from "react";
 import { useTheme } from "next-themes";
 import { useActiveConnection } from "@/hooks/useActiveConnection";
 import { useDatabaseObjects } from "@/hooks/useDatabaseObjects";
-import { Command, PlusCircle, Loader2Icon, SunMoon } from "lucide-react";
+import {
+  Command,
+  PlusCircle,
+  Loader2Icon,
+  SunMoon,
+  FolderSymlink,
+  Table2,
+  ScanEye,
+  Eye,
+  Workflow,
+  ListStart,
+  Waypoints,
+  Activity,
+  FileScan,
+  FileTerminal,
+  FolderKey,
+  Key,
+  LogOut,
+} from "lucide-react";
 import { NavUser } from "@/components/nav-user";
 import { Label } from "@/components/ui/label";
 import { ConnectionForm } from "@/components/connection-form";
@@ -14,6 +32,7 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarInput,
   SidebarMenu,
@@ -28,7 +47,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useConnections } from "@/hooks/useConnections";
+import { DatabaseObjectSideBar } from "./database-object-sidebar";
 
 // This is sample data
 const data = {
@@ -114,14 +139,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <div className="flex w-full items-center justify-between">
             <div className="text-foreground text-base font-medium">GWDB</div>
             <Label className="flex items-center gap-2 text-sm">
-              <Button
-                variant="outline"
-                size="icon"
-                className="cursor-pointer"
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              >
-                <SunMoon />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="cursor-pointer"
+                    onClick={() =>
+                      setTheme(theme === "dark" ? "light" : "dark")
+                    }
+                  >
+                    <SunMoon />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {theme === "dark" ? "Light" : "Dark"}
+                </TooltipContent>
+              </Tooltip>
             </Label>
           </div>
           <SidebarInput placeholder="Type to search..." />
@@ -166,90 +200,109 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
                   {!loadingObjects && objects && (
                     <>
-                      {/* Tabelas */}
-                      <SidebarMenu>
-                        <SidebarMenuItem>
-                          <span className="font-bold">Tabelas</span>
-                        </SidebarMenuItem>
-                        {objects.tables?.map((t, i) => (
-                          <SidebarMenuItem key={i}>
-                            <SidebarMenuButton>
-                              {t.TABLE_NAME}
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                        ))}
-                      </SidebarMenu>
+                      {/* Database */}
+                      <SidebarGroupLabel className="font-bold flex items-center justify-between w-full mb-2">
+                        <div className="flex items-center gap-2">
+                          {connection?.connection_name}
+                        </div>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="size-8 cursor-pointer"
+                              onClick={() => {
+                                setConnection(null);
+                                refetchConnections();
+                              }}
+                            >
+                              <LogOut />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Desconectar</TooltipContent>
+                        </Tooltip>
+                      </SidebarGroupLabel>
+
+                      {/* Tables */}
+                      <DatabaseObjectSideBar
+                        icon={<FolderSymlink className="size-5" />}
+                        title="Tabelas"
+                        items={objects.tables ?? []}
+                        renderItem={(t) => (
+                          <SidebarMenuButton>
+                            <Table2 />
+                            {t.TABLE_NAME}
+                          </SidebarMenuButton>
+                        )}
+                      />
 
                       {/* Views */}
-                      <SidebarMenu>
-                        <SidebarMenuItem>
-                          <span className="font-bold">Views</span>
-                        </SidebarMenuItem>
-                        {objects.views?.map((t, i) => (
-                          <SidebarMenuItem key={i}>
-                            <SidebarMenuButton>{t.VIEW_NAME}</SidebarMenuButton>
-                          </SidebarMenuItem>
-                        ))}
-                      </SidebarMenu>
+                      <DatabaseObjectSideBar
+                        icon={<ScanEye className="size-5" />}
+                        title="Views"
+                        items={objects.views ?? []}
+                        renderItem={(t) => (
+                          <SidebarMenuButton>
+                            <Eye />
+                            {t.VIEW_NAME}
+                          </SidebarMenuButton>
+                        )}
+                      />
 
                       {/* Procedures */}
-                      <SidebarMenu>
-                        <SidebarMenuItem>
-                          <span className="font-bold">Procedures</span>
-                        </SidebarMenuItem>
-                        {objects.procedures?.map((t, i) => (
-                          <SidebarMenuItem key={i}>
-                            <SidebarMenuButton>
-                              {t.ROUTINE_NAME}
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                        ))}
-                      </SidebarMenu>
+                      <DatabaseObjectSideBar
+                        icon={<Workflow className="size-5" />}
+                        title="Procedures"
+                        items={objects.procedures ?? []}
+                        renderItem={(t) => (
+                          <SidebarMenuButton>
+                            <ListStart />
+                            {t.ROUTINE_NAME}
+                          </SidebarMenuButton>
+                        )}
+                      />
 
                       {/* Triggers */}
-                      <SidebarMenu>
-                        <SidebarMenuItem>
-                          <span className="font-bold">Triggers</span>
-                        </SidebarMenuItem>
-                        {objects.triggers?.map((t, i) => (
-                          <SidebarMenuItem key={i}>
-                            <SidebarMenuButton>
-                              {t.TRIGGER_NAME}
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                        ))}
-                      </SidebarMenu>
+                      <DatabaseObjectSideBar
+                        icon={<Waypoints className="size-5" />}
+                        title="Triggers"
+                        items={objects.triggers ?? []}
+                        renderItem={(t) => (
+                          <SidebarMenuButton>
+                            <Activity />
+                            {t.TRIGGER_NAME}
+                          </SidebarMenuButton>
+                        )}
+                      />
 
                       {/* Eventos */}
-                      <SidebarMenu>
-                        <SidebarMenuItem>
-                          <span className="font-bold">Eventos</span>
-                        </SidebarMenuItem>
-                        {objects.events?.map((t, i) => (
-                          <SidebarMenuItem key={i}>
-                            <SidebarMenuButton>
-                              {t.EVENT_NAME}
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                        ))}
-                      </SidebarMenu>
+                      <DatabaseObjectSideBar
+                        icon={<FileScan className="size-5" />}
+                        title="Eventos"
+                        items={objects.events ?? []}
+                        renderItem={(t) => (
+                          <SidebarMenuButton>
+                            <FileTerminal />
+                            {t.EVENT_NAME}
+                          </SidebarMenuButton>
+                        )}
+                      />
 
                       {/* Índices */}
-                      <SidebarMenu>
-                        <SidebarMenuItem>
-                          <span className="font-bold">Índices</span>
-                        </SidebarMenuItem>
-                        {objects.indexes?.map((t, i) => (
-                          <SidebarMenuItem key={i}>
-                            <SidebarMenuButton>
-                              {t.INDEX_NAME}
-                              <span className="ml-1 text-xs text-muted-foreground">
-                                ({t.TABLE_NAME})
-                              </span>
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                        ))}
-                      </SidebarMenu>
+                      <DatabaseObjectSideBar
+                        icon={<FolderKey className="size-5" />}
+                        title="Índices"
+                        items={objects.indexes ?? []}
+                        renderItem={(t) => (
+                          <SidebarMenuButton>
+                            <Key />
+                            {t.INDEX_NAME}
+                            <span className="ml-1 text-xs text-muted-foreground">
+                              ({t.TABLE_NAME})
+                            </span>
+                          </SidebarMenuButton>
+                        )}
+                      />
                     </>
                   )}
                 </>
