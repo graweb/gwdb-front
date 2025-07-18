@@ -1,6 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
+import { Play } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
+import { useActiveConnection } from "@/hooks/useActiveConnection";
+import { toast } from "sonner";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -25,17 +30,38 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 
 export default function Page() {
   const { resolvedTheme } = useTheme();
   const [monacoTheme, setMonacoTheme] = useState("vs");
+  const [query, setQuery] = useState("");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [result, setResult] = useState<any[]>([]);
+  const [columns, setColumns] = useState<string[]>([]);
+  const { connection } = useActiveConnection();
 
   useEffect(() => {
     setMonacoTheme(resolvedTheme === "dark" ? "vs-dark" : "vs");
   }, [resolvedTheme]);
+
+  const handleExecuteQuery = async () => {
+    const res = await fetch("/api/query", {
+      method: "POST",
+      body: JSON.stringify({ query, connection }),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      const rows = Array.isArray(data.result[0]) ? data.result[0] : data.result;
+      setResult(rows);
+      if (rows.length > 0) setColumns(Object.keys(rows[0]));
+    } else {
+      toast.warning(data.error);
+    }
+  };
 
   return (
     <SidebarProvider
@@ -55,12 +81,25 @@ export default function Page() {
           />
           <Breadcrumb>
             <BreadcrumbList>
+              <Button
+                disabled={!connection?.connection_name}
+                variant="outline"
+                size="icon"
+                className="size-8 cursor-pointer"
+                onClick={handleExecuteQuery}
+              >
+                <Play />
+              </Button>
               <BreadcrumbItem className="hidden md:block">
                 <BreadcrumbLink href="#">All Inboxes</BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden md:block" />
               <BreadcrumbItem>
                 <BreadcrumbPage>Inbox</BreadcrumbPage>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="hidden md:block" />
+              <BreadcrumbItem>
+                <BreadcrumbPage>{connection?.connection_name}</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
@@ -72,8 +111,9 @@ export default function Page() {
             <Editor
               height="100%"
               defaultLanguage="sql"
-              defaultValue="-- Digite sua query aqui"
+              defaultValue="-- digite sua query"
               theme={monacoTheme}
+              onChange={(val) => setQuery(val || "")}
               options={{
                 fontSize: 14,
                 minimap: { enabled: false },
@@ -86,22 +126,19 @@ export default function Page() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Email</TableHead>
+                  {columns.map((col) => (
+                    <TableHead key={col}>{col.toUpperCase()}</TableHead>
+                  ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                <TableRow>
-                  <TableCell>1</TableCell>
-                  <TableCell>João</TableCell>
-                  <TableCell>joao@email.com</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>2</TableCell>
-                  <TableCell>Ana</TableCell>
-                  <TableCell>ana@email.com</TableCell>
-                </TableRow>
+                {result.map((row, idx) => (
+                  <TableRow key={idx}>
+                    {columns.map((col) => (
+                      <TableCell key={col}>{row[col]?.toString()}</TableCell>
+                    ))}
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>

@@ -5,10 +5,6 @@ import { encrypt } from "@/lib/crypto";
 export async function GET() {
   const stmt = db.prepare("SELECT * FROM connections ORDER BY id DESC");
   const connections = stmt.all();
-
-  // Se a senha está criptografada e quiser omitir no GET, pode fazer:
-  // connections.forEach(c => delete c.password);
-
   return NextResponse.json(connections);
 }
 

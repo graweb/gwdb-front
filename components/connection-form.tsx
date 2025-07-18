@@ -32,6 +32,7 @@ import { useState } from "react";
 
 export function ConnectionForm({ onSuccess }: { onSuccess: () => void }) {
   const { createConnection, loading } = useConnections();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [port, setPort] = useState("");
 
   const form = useForm<ConnectionFormValues>({
@@ -96,7 +97,10 @@ export function ConnectionForm({ onSuccess }: { onSuccess: () => void }) {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
+                  <SelectItem value="mariadb">MariaDB</SelectItem>
                   <SelectItem value="mysql">MySQL</SelectItem>
+                  <SelectItem value="postgresql">PostgreSQL</SelectItem>
+                  <SelectItem value="sqlite">SQLite</SelectItem>
                   <SelectItem value="sqlserver">SQL Server</SelectItem>
                 </SelectContent>
               </Select>

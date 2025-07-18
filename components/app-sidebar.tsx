@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useTheme } from "next-themes";
+import { useActiveConnection } from "@/hooks/useActiveConnection";
 import { Command, PlusCircle, Loader2Icon, SunMoon } from "lucide-react";
 import { NavUser } from "@/components/nav-user";
 import { Label } from "@/components/ui/label";
@@ -41,6 +42,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { connections, loading, error, refetchConnections } = useConnections();
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const { theme, setTheme } = useTheme();
+  const { setConnection, connection } = useActiveConnection();
 
   return (
     <Sidebar
@@ -64,8 +66,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <Command className="size-4" />
                   </div>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">Acme Inc</span>
-                    <span className="truncate text-xs">Enterprise</span>
+                    <span className="truncate font-medium">GWDB</span>
                   </div>
                 </a>
               </SidebarMenuButton>
@@ -143,6 +144,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <a
                     href="#"
                     key={conn.id}
+                    onClick={() => setConnection(conn)}
                     className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex flex-col items-start gap-2 border-b p-4 text-sm leading-tight whitespace-nowrap last:border-b-0"
                   >
                     <div className="flex w-full items-center gap-2">
