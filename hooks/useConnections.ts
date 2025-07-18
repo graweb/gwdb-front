@@ -3,8 +3,8 @@ import { Connection } from "@/types/connection";
 
 export function useConnections() {
   const [connections, setConnections] = useState<Connection[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loadingConnection, setLoading] = useState(false);
+  const [errorConnection, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   const fetchConnections = async () => {
@@ -72,8 +72,8 @@ export function useConnections() {
 
   return {
     connections,
-    loading,
-    error,
+    loadingConnection,
+    errorConnection,
     success,
     createConnection,
     refetchConnections: fetchConnections,

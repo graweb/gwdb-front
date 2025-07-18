@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
-import { Play } from "lucide-react";
+import { Play, FileCode2 } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { useActiveConnection } from "@/hooks/useActiveConnection";
 import { toast } from "sonner";
@@ -89,6 +89,13 @@ export default function Page() {
                 onClick={handleExecuteQuery}
               >
                 <Play />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="size-8 cursor-pointer"
+              >
+                <FileCode2 />
               </Button>
               <BreadcrumbItem className="hidden md:block">
                 <BreadcrumbLink href="#">All Inboxes</BreadcrumbLink>

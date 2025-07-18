@@ -42,8 +42,9 @@ export async function POST(req: NextRequest) {
     await db.destroy();
 
     return NextResponse.json({ success: true, result });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Erro desconhecido.";
+    return NextResponse.json({ success: false, error: message });
   }
 }

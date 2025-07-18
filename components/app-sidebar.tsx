@@ -3,6 +3,7 @@
 import React from "react";
 import { useTheme } from "next-themes";
 import { useActiveConnection } from "@/hooks/useActiveConnection";
+import { useDatabaseObjects } from "@/hooks/useDatabaseObjects";
 import { Command, PlusCircle, Loader2Icon, SunMoon } from "lucide-react";
 import { NavUser } from "@/components/nav-user";
 import { Label } from "@/components/ui/label";
@@ -39,9 +40,15 @@ const data = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { connections, loading, error, refetchConnections } = useConnections();
+  const {
+    connections,
+    loadingConnection,
+    errorConnection,
+    refetchConnections,
+  } = useConnections();
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const { theme, setTheme } = useTheme();
+  const { objects, loadingObjects, errorObjects } = useDatabaseObjects();
   const { setConnection, connection } = useActiveConnection();
 
   return (
@@ -122,48 +129,171 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarContent>
           <SidebarGroup className="px-0">
             <SidebarGroupContent>
-              {loading && (
+              {loadingConnection && (
                 <div className="flex justify-center py-4">
                   <Loader2Icon className="animate-spin size-4 text-muted-foreground" />
                 </div>
               )}
 
-              {error && <p className="text-red-500">{error}</p>}
-
-              {!loading && !error && connections.length === 0 && (
-                <div className="flex justify-center py-4">
-                  <span className="text-sm text-muted-foreground">
-                    Nenhuma conexão encontrada
-                  </span>
-                </div>
+              {errorConnection && (
+                <p className="text-red-500">{errorConnection}</p>
               )}
 
-              {!loading &&
-                !error &&
-                connections.map((conn) => (
-                  <a
-                    href="#"
-                    key={conn.id}
-                    onClick={() => setConnection(conn)}
-                    className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex flex-col items-start gap-2 border-b p-4 text-sm leading-tight whitespace-nowrap last:border-b-0"
-                  >
-                    <div className="flex w-full items-center gap-2">
-                      <span>{conn.connection_name}</span>
-                      <span className="ml-auto text-xs">
-                        <Badge
-                          variant="secondary"
-                          className="bg-violet-200 text-black dark:bg-violet-300"
-                        >
-                          {conn.connection_type}
-                        </Badge>
-                      </span>
-                    </div>
-                    <span className="font-medium">{conn.server}</span>
-                    <span className="line-clamp-2 w-[260px] text-xs whitespace-break-spaces">
-                      {conn.database_name + " - " + conn.port}
+              {!loadingConnection &&
+                !errorConnection &&
+                connections.length === 0 && (
+                  <div className="flex justify-center py-4">
+                    <span className="text-sm text-muted-foreground">
+                      Nenhuma conexão encontrada
                     </span>
-                  </a>
-                ))}
+                  </div>
+                )}
+
+              {connection ? (
+                // Exibe objetos do banco
+                <>
+                  {loadingObjects && (
+                    <div className="flex justify-center py-4">
+                      <Loader2Icon className="animate-spin size-4 text-muted-foreground" />
+                    </div>
+                  )}
+
+                  {errorObjects && (
+                    <div className="text-red-500 text-sm px-4">
+                      {errorObjects}
+                    </div>
+                  )}
+
+                  {!loadingObjects && objects && (
+                    <>
+                      {/* Tabelas */}
+                      <SidebarMenu>
+                        <SidebarMenuItem>
+                          <span className="font-bold">Tabelas</span>
+                        </SidebarMenuItem>
+                        {objects.tables?.map((t, i) => (
+                          <SidebarMenuItem key={i}>
+                            <SidebarMenuButton>
+                              {t.TABLE_NAME}
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        ))}
+                      </SidebarMenu>
+
+                      {/* Views */}
+                      <SidebarMenu>
+                        <SidebarMenuItem>
+                          <span className="font-bold">Views</span>
+                        </SidebarMenuItem>
+                        {objects.views?.map((t, i) => (
+                          <SidebarMenuItem key={i}>
+                            <SidebarMenuButton>{t.VIEW_NAME}</SidebarMenuButton>
+                          </SidebarMenuItem>
+                        ))}
+                      </SidebarMenu>
+
+                      {/* Procedures */}
+                      <SidebarMenu>
+                        <SidebarMenuItem>
+                          <span className="font-bold">Procedures</span>
+                        </SidebarMenuItem>
+                        {objects.procedures?.map((t, i) => (
+                          <SidebarMenuItem key={i}>
+                            <SidebarMenuButton>
+                              {t.ROUTINE_NAME}
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        ))}
+                      </SidebarMenu>
+
+                      {/* Triggers */}
+                      <SidebarMenu>
+                        <SidebarMenuItem>
+                          <span className="font-bold">Triggers</span>
+                        </SidebarMenuItem>
+                        {objects.triggers?.map((t, i) => (
+                          <SidebarMenuItem key={i}>
+                            <SidebarMenuButton>
+                              {t.TRIGGER_NAME}
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        ))}
+                      </SidebarMenu>
+
+                      {/* Eventos */}
+                      <SidebarMenu>
+                        <SidebarMenuItem>
+                          <span className="font-bold">Eventos</span>
+                        </SidebarMenuItem>
+                        {objects.events?.map((t, i) => (
+                          <SidebarMenuItem key={i}>
+                            <SidebarMenuButton>
+                              {t.EVENT_NAME}
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        ))}
+                      </SidebarMenu>
+
+                      {/* Índices */}
+                      <SidebarMenu>
+                        <SidebarMenuItem>
+                          <span className="font-bold">Índices</span>
+                        </SidebarMenuItem>
+                        {objects.indexes?.map((t, i) => (
+                          <SidebarMenuItem key={i}>
+                            <SidebarMenuButton>
+                              {t.INDEX_NAME}
+                              <span className="ml-1 text-xs text-muted-foreground">
+                                ({t.TABLE_NAME})
+                              </span>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        ))}
+                      </SidebarMenu>
+                    </>
+                  )}
+                </>
+              ) : (
+                // Exibe conexões disponíveis
+                <>
+                  {!loadingConnection &&
+                    !errorConnection &&
+                    connections.length === 0 && (
+                      <div className="flex justify-center py-4">
+                        <span className="text-sm text-muted-foreground">
+                          Nenhuma conexão encontrada
+                        </span>
+                      </div>
+                    )}
+
+                  {!loadingConnection &&
+                    !errorConnection &&
+                    connections.map((conn) => (
+                      <a
+                        href="#"
+                        key={conn.id}
+                        onClick={() => setConnection(conn)}
+                        className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex flex-col items-start gap-2 border-b p-4 text-sm leading-tight whitespace-nowrap last:border-b-0"
+                      >
+                        <div className="flex w-full items-center gap-2">
+                          <span>{conn.connection_name}</span>
+                          <span className="ml-auto text-xs">
+                            <Badge
+                              variant="secondary"
+                              className="bg-violet-200 text-black dark:bg-violet-300"
+                            >
+                              {conn.connection_type}
+                            </Badge>
+                          </span>
+                        </div>
+                        <span className="font-medium">{conn.server}</span>
+                        <span className="line-clamp-2 w-[260px] text-xs whitespace-break-spaces">
+                          {conn.database_name + " - " + conn.port}
+                        </span>
+                      </a>
+                    ))}
+                </>
+              )}
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
