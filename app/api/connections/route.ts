@@ -32,6 +32,37 @@ export async function POST(req: Request) {
   return NextResponse.json(result.changes > 0);
 }
 
+export async function PUT(req: Request) {
+  const data = await req.json();
+
+  const encryptedPassword = encrypt(data.password);
+
+  const stmt = db.prepare(`
+    UPDATE connections SET
+      connection_name = ?,
+      connection_type = ?,
+      server = ?,
+      port = ?,
+      database_name = ?,
+      username = ?,
+      password = ?
+    WHERE id = ?
+  `);
+
+  const result = stmt.run(
+    data.connection_name,
+    data.connection_type,
+    data.server,
+    data.port,
+    data.database_name,
+    data.username,
+    encryptedPassword,
+    data.id
+  );
+
+  return NextResponse.json(result.changes > 0);
+}
+
 export async function DELETE(req: Request) {
   const data = await req.json();
 

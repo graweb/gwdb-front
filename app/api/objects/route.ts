@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import knex from "knex";
+import { decrypt } from "@/lib/crypto";
 
 export async function POST(req: NextRequest) {
   const { connection } = await req.json();
@@ -30,9 +31,9 @@ export async function POST(req: NextRequest) {
     const connectionConfig =
       client === "mssql"
         ? {
-            server: connection.host,
+            server: connection.server,
             user: connection.username,
-            password: connection.password,
+            password: decrypt(connection.password),
             database: connection.database_name,
             options: {
               port: Number(connection.port),
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
             host: connection.host,
             port: Number(connection.port),
             user: connection.username,
-            password: connection.password,
+            password: decrypt(connection.password),
             database: connection.database_name,
           };
 
@@ -179,42 +180,58 @@ export async function POST(req: NextRequest) {
         indexes,
       };
     } else if (client === "mssql") {
-      const tables = await db.raw(`
-            SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'
-        `);
+      await db.raw(`USE [${connection.database_name}]`);
 
-      const views = await db.raw(`
-            SELECT TABLE_NAME FROM INFORMATION_SCHEMA.VIEWS
-        `);
+      const getRecordset = <T = unknown>(res: unknown): T[] => {
+        if (typeof res === "object" && res !== null && "recordset" in res) {
+          return (res as { recordset: T[] }).recordset;
+        }
 
-      const procedures = await db.raw(`
-            SELECT ROUTINE_NAME FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_TYPE = 'PROCEDURE'
-        `);
+        if (Array.isArray(res)) {
+          return res as T[];
+        }
 
-      const triggers = await db.raw(`
-            SELECT name AS trigger_name, OBJECT_NAME(parent_id) AS table_name
-            FROM sys.triggers
-            WHERE parent_class_desc = 'OBJECT_OR_COLUMN'
-        `);
+        return [];
+      };
 
-      const indexes = await db.raw(`
-            SELECT 
-            ind.name AS index_name,
-            obj.name AS table_name
-            FROM 
-            sys.indexes ind
-            INNER JOIN sys.objects obj ON ind.object_id = obj.object_id
-            WHERE 
-            obj.type = 'U' AND ind.is_primary_key = 0 AND ind.is_unique = 0
-        `);
+      const tablesRes = await db.raw(`
+        SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'
+      `);
+      const viewsRes = await db.raw(`
+        SELECT TABLE_NAME FROM INFORMATION_SCHEMA.VIEWS
+      `);
+      const proceduresRes = await db.raw(`
+        SELECT ROUTINE_NAME FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_TYPE = 'PROCEDURE'
+      `);
+      const triggersRes = await db.raw(`
+        SELECT name AS trigger_name, OBJECT_NAME(parent_id) AS TABLE_NAME
+        FROM sys.triggers
+        WHERE parent_class_desc = 'OBJECT_OR_COLUMN'
+      `);
+      const indexesRes = await db.raw(`
+        SELECT 
+          ind.name AS INDEX_NAME,
+          obj.name AS TABLE_NAME
+        FROM 
+          sys.indexes ind
+        INNER JOIN sys.objects obj ON ind.object_id = obj.object_id
+        WHERE 
+          obj.type = 'U' AND ind.is_primary_key = 0 AND ind.is_unique = 0
+      `);
+
+      const tables = getRecordset(tablesRes);
+      const views = getRecordset(viewsRes);
+      const procedures = getRecordset(proceduresRes);
+      const triggers = getRecordset(triggersRes);
+      const indexes = getRecordset(indexesRes);
 
       result = {
-        tables: tables.recordset,
-        views: views.recordset,
-        procedures: procedures.recordset,
-        triggers: triggers.recordset,
-        events: [], // eventos são complexos em SQL Server, normalmente agendados via SQL Server Agent
-        indexes: indexes.recordset,
+        tables,
+        views,
+        procedures,
+        triggers,
+        events: [],
+        indexes,
       };
     }
 

@@ -28,12 +28,17 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { DialogFooter } from "@/components/ui/dialog";
 import { useConnections } from "@/hooks/useConnections";
-import { useState } from "react";
+import { useEffect } from "react";
+import { Connection } from "@/types/connection";
 
-export function ConnectionForm({ onSuccess }: { onSuccess: () => void }) {
-  const { createConnection, loading } = useConnections();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [port, setPort] = useState("");
+type Props = {
+  onSuccess: () => void;
+  connection?: Connection | null;
+};
+
+export function ConnectionForm({ onSuccess, connection }: Props) {
+  const { createConnection, updateConnection, loadingConnection } =
+    useConnections();
 
   const form = useForm<ConnectionFormValues>({
     resolver: zodResolver(connectionFormSchema),
@@ -48,24 +53,47 @@ export function ConnectionForm({ onSuccess }: { onSuccess: () => void }) {
     },
   });
 
+  useEffect(() => {
+    if (connection) {
+      form.setValue("connection_name", connection.connection_name);
+      form.setValue("connection_type", connection.connection_type);
+      form.setValue("server", connection.server);
+      form.setValue("port", connection.port);
+      form.setValue("database_name", connection.database_name);
+      form.setValue("username", connection.username);
+      // por segurança, deixamos a senha em branco
+      form.setValue("password", "");
+    }
+  }, [connection, form]);
+
   const handleTypeChange = (value: string) => {
     form.setValue("connection_type", value);
-    if (value === "mysql") {
-      setPort("3306");
-      form.setValue("port", "3306");
-    } else if (value === "sqlserver") {
-      setPort("1433");
-      form.setValue("port", "1433");
-    } else {
-      setPort("");
-      form.setValue("port", "");
-    }
+
+    const defaultPorts: Record<string, string> = {
+      mysql: "3306",
+      mariadb: "3306",
+      sqlserver: "1433",
+      postgresql: "5432",
+      sqlite: "",
+    };
+
+    form.setValue("port", defaultPorts[value] || "");
   };
 
   const onSubmit = async (values: ConnectionFormValues) => {
-    await createConnection(values);
-    toast.success("Conexão salva com sucesso");
-    onSuccess();
+    try {
+      if (connection?.id) {
+        await updateConnection(values, connection.id);
+        toast.success("Conexão atualizada com sucesso");
+      } else {
+        await createConnection(values);
+        toast.success("Conexão criada com sucesso");
+      }
+
+      onSuccess();
+    } catch (error) {
+      toast.error("Erro ao salvar conexão " + error);
+    }
   };
 
   return (
@@ -87,10 +115,16 @@ export function ConnectionForm({ onSuccess }: { onSuccess: () => void }) {
         <FormField
           control={form.control}
           name="connection_type"
-          render={() => (
+          render={({ field }) => (
             <FormItem>
               <FormLabel>Banco de dados</FormLabel>
-              <Select onValueChange={handleTypeChange}>
+              <Select
+                value={field.value}
+                onValueChange={(value) => {
+                  field.onChange(value);
+                  handleTypeChange(value);
+                }}
+              >
                 <FormControl>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Selecione" />
@@ -108,6 +142,7 @@ export function ConnectionForm({ onSuccess }: { onSuccess: () => void }) {
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="server"
@@ -179,13 +214,15 @@ export function ConnectionForm({ onSuccess }: { onSuccess: () => void }) {
             type="button"
             variant="outline"
             onClick={onSuccess}
-            disabled={loading}
+            disabled={loadingConnection}
           >
             Fechar
           </Button>
-          <Button type="submit" disabled={loading}>
-            {loading ?? <Loader2Icon className="animate-spin" />}
-            {loading ? "Salvando..." : "Salvar"}
+          <Button type="submit" disabled={loadingConnection}>
+            {loadingConnection && (
+              <Loader2Icon className="animate-spin mr-2 size-4" />
+            )}
+            {connection?.id ? "Atualizar" : "Salvar"}
           </Button>
         </DialogFooter>
       </form>

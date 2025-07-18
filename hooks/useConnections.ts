@@ -66,6 +66,51 @@ export function useConnections() {
     }
   }
 
+  async function updateConnection(
+    data: {
+      connection_name: string;
+      connection_type: string;
+      server: string;
+      port: string;
+      database_name: string;
+      username: string;
+      password: string;
+    },
+    id: number
+  ) {
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      const res = await fetch("/api/connections", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id, ...data }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData?.error || "Erro ao atualizar a conexão.");
+      }
+
+      const updated = await res.json();
+      setSuccess(true);
+
+      return updated;
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Erro desconhecido");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function removeConnection(data: Connection | null) {
     setLoading(true);
     setError(null);
@@ -106,6 +151,7 @@ export function useConnections() {
     errorConnection,
     success,
     createConnection,
+    updateConnection,
     removeConnection,
     refetchConnections: fetchConnections,
   };

@@ -81,18 +81,25 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const { objects, loadingObjects, errorObjects } = useDatabaseObjects();
-  const { setConnection, connection } = useActiveConnection();
+  const { connection, setConnection } = useActiveConnection();
   const [isModalRemoveOpen, setIsModalRemoveOpen] = useState(false);
-  const [connectionToRemove, setConnectionToRemove] =
+  const [selectedConnection, setSelectedConnection] =
     useState<Connection | null>(null);
 
-  const handleRemoveConnection = (conn: Connection) => {
-    setConnectionToRemove(conn);
-    setIsModalRemoveOpen(true);
+  const handleModal = (conn: Connection, type: string) => {
+    setSelectedConnection(conn);
+
+    if (type === "edit") {
+      setIsModalOpen(true);
+    }
+
+    if (type === "delete") {
+      setIsModalRemoveOpen(true);
+    }
   };
 
   const submitRemoveConnection = async () => {
-    await removeConnection(connectionToRemove);
+    await removeConnection(selectedConnection);
     setIsModalRemoveOpen(false);
     refetchConnections();
   };
@@ -386,6 +393,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 variant="outline"
                                 size="icon"
                                 className="size-8 cursor-pointer"
+                                onClick={() => handleModal(conn, "edit")}
                               >
                                 <Edit />
                               </Button>
@@ -399,7 +407,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 variant="outline"
                                 size="icon"
                                 className="size-8 cursor-pointer"
-                                onClick={() => handleRemoveConnection(conn)}
+                                onClick={() => handleModal(conn, "delete")}
                               >
                                 <Trash />
                               </Button>
@@ -416,14 +424,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarContent>
       </Sidebar>
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog
+        open={isModalOpen}
+        onOpenChange={(v) => {
+          setIsModalOpen(v);
+          if (!v) setSelectedConnection(null);
+        }}
+      >
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Nova conexão</DialogTitle>
+            <DialogTitle>
+              {selectedConnection ? "Editar conexão" : "Nova conexão"}
+            </DialogTitle>
           </DialogHeader>
           <ConnectionForm
+            connection={selectedConnection}
             onSuccess={() => {
               setIsModalOpen(false);
+              setSelectedConnection(null);
               refetchConnections();
             }}
           />
@@ -436,8 +454,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <DialogTitle>Atenção</DialogTitle>
           </DialogHeader>
           <Label>
-            Deseja remover a conexão {connectionToRemove?.connection_name} com o
-            banco de dados {connectionToRemove?.database_name}?
+            Deseja remover a conexão {selectedConnection?.connection_name} com o
+            banco de dados {selectedConnection?.database_name}?
           </Label>
           <DialogFooter>
             <DialogClose asChild>

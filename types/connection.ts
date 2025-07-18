@@ -3,7 +3,7 @@ export type Connection = {
   connection_name: string;
   connection_type: string;
   server: string;
-  port: number;
+  port: string;
   database_name: string;
   username: string;
   password: string;

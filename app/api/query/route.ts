@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import knex from "knex";
+import { decrypt } from "@/lib/crypto";
 
 export async function POST(req: NextRequest) {
   const { query, connection } = await req.json();
@@ -30,9 +31,9 @@ export async function POST(req: NextRequest) {
     const connectionConfig =
       client === "mssql"
         ? {
-            server: connection.host,
+            server: connection.server,
             user: connection.username,
-            password: connection.password,
+            password: decrypt(connection.password),
             database: connection.database_name,
             options: {
               port: Number(connection.port),
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
             host: connection.host,
             port: Number(connection.port),
             user: connection.username,
-            password: connection.password,
+            password: decrypt(connection.password),
             database: connection.database_name,
           };
 
