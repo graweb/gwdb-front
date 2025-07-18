@@ -6,6 +6,8 @@ import { Play, FileCode2 } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { useActiveConnection } from "@/hooks/useActiveConnection";
 import { toast } from "sonner";
+import { DataTable } from "@/components/data-table";
+import { ColumnDef } from "@tanstack/react-table";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -23,14 +25,6 @@ import {
 
 import Editor from "@monaco-editor/react";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -45,10 +39,25 @@ export default function Page() {
   const [result, setResult] = useState<any[]>([]);
   const [columns, setColumns] = useState<string[]>([]);
   const { connection } = useActiveConnection();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [columnDefs, setColumnDefs] = useState<ColumnDef<any>[]>([]);
 
   useEffect(() => {
     setMonacoTheme(resolvedTheme === "dark" ? "vs-dark" : "vs");
   }, [resolvedTheme]);
+
+  useEffect(() => {
+    if (columns.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const dynamicColumns: ColumnDef<any>[] = columns.map((col) => ({
+        accessorKey: col,
+        header: col.toUpperCase(),
+        cell: ({ row }) => row.original[col]?.toString() ?? "",
+      }));
+
+      setColumnDefs(dynamicColumns);
+    }
+  }, [columns]);
 
   const handleExecuteQuery = async () => {
     const res = await fetch("/api/query", {
@@ -145,24 +154,9 @@ export default function Page() {
 
           {/* Resultado da Tabela */}
           <div className="flex-1 min-h-[200px] border rounded-md overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {columns.map((col) => (
-                    <TableHead key={col}>{col.toUpperCase()}</TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {result.map((row, idx) => (
-                  <TableRow key={idx}>
-                    {columns.map((col) => (
-                      <TableCell key={col}>{row[col]?.toString()}</TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            {result.length > 0 && columnDefs.length > 0 && (
+              <DataTable columns={columnDefs} data={result} />
+            )}
           </div>
         </div>
       </SidebarInset>

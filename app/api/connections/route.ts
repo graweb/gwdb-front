@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     ) VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
 
-  stmt.run(
+  const result = stmt.run(
     data.connection_name,
     data.connection_type,
     data.server,
@@ -29,5 +29,18 @@ export async function POST(req: Request) {
     encryptedPassword
   );
 
-  return NextResponse.json(true);
+  return NextResponse.json(result.changes > 0);
+}
+
+export async function DELETE(req: Request) {
+  const data = await req.json();
+
+  if (!data.id) {
+    return NextResponse.json({ error: "ID is required" }, { status: 400 });
+  }
+
+  const stmt = db.prepare("DELETE FROM connections WHERE id = ?");
+  const result = stmt.run(data.id);
+
+  return NextResponse.json(result.changes > 0);
 }

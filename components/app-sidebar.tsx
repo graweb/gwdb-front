@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useTheme } from "next-themes";
 import { useActiveConnection } from "@/hooks/useActiveConnection";
 import { useDatabaseObjects } from "@/hooks/useDatabaseObjects";
@@ -21,7 +21,10 @@ import {
   FileTerminal,
   FolderKey,
   Key,
-  LogOut,
+  Unplug,
+  Plug,
+  Edit,
+  Trash,
 } from "lucide-react";
 import { NavUser } from "@/components/nav-user";
 import { Label } from "@/components/ui/label";
@@ -43,7 +46,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -54,6 +59,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useConnections } from "@/hooks/useConnections";
 import { DatabaseObjectSideBar } from "./database-object-sidebar";
+import { Connection } from "@/types/connection";
 
 // This is sample data
 const data = {
@@ -69,12 +75,27 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     connections,
     loadingConnection,
     errorConnection,
+    removeConnection,
     refetchConnections,
   } = useConnections();
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const { objects, loadingObjects, errorObjects } = useDatabaseObjects();
   const { setConnection, connection } = useActiveConnection();
+  const [isModalRemoveOpen, setIsModalRemoveOpen] = useState(false);
+  const [connectionToRemove, setConnectionToRemove] =
+    useState<Connection | null>(null);
+
+  const handleRemoveConnection = (conn: Connection) => {
+    setConnectionToRemove(conn);
+    setIsModalRemoveOpen(true);
+  };
+
+  const submitRemoveConnection = async () => {
+    await removeConnection(connectionToRemove);
+    setIsModalRemoveOpen(false);
+    refetchConnections();
+  };
 
   return (
     <Sidebar
@@ -216,7 +237,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 refetchConnections();
                               }}
                             >
-                              <LogOut />
+                              <Unplug />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>Desconectar</TooltipContent>
@@ -322,11 +343,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   {!loadingConnection &&
                     !errorConnection &&
                     connections.map((conn) => (
-                      <a
-                        href="#"
+                      <div
                         key={conn.id}
-                        onClick={() => setConnection(conn)}
-                        className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex flex-col items-start gap-2 border-b p-4 text-sm leading-tight whitespace-nowrap last:border-b-0"
+                        className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex flex-col items-start gap-2 border-b p-4 text-sm leading-tight whitespace-nowrap last:border-b-0 text-left w-full"
                       >
                         <div className="flex w-full items-center gap-2">
                           <span>{conn.connection_name}</span>
@@ -339,11 +358,56 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             </Badge>
                           </span>
                         </div>
+
                         <span className="font-medium">{conn.server}</span>
                         <span className="line-clamp-2 w-[260px] text-xs whitespace-break-spaces">
                           {conn.database_name + " - " + conn.port}
                         </span>
-                      </a>
+
+                        {/* Botões alinhados à direita */}
+                        <div className="mt-2 flex w-full justify-end gap-1">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="size-8 cursor-pointer"
+                                onClick={() => setConnection(conn)}
+                              >
+                                <Plug />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Conectar</TooltipContent>
+                          </Tooltip>
+
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="size-8 cursor-pointer"
+                              >
+                                <Edit />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Editar</TooltipContent>
+                          </Tooltip>
+
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="size-8 cursor-pointer"
+                                onClick={() => handleRemoveConnection(conn)}
+                              >
+                                <Trash />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Excluir</TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </div>
                     ))}
                 </>
               )}
@@ -363,6 +427,26 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               refetchConnections();
             }}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isModalRemoveOpen} onOpenChange={setIsModalRemoveOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Atenção</DialogTitle>
+          </DialogHeader>
+          <Label>
+            Deseja remover a conexão {connectionToRemove?.connection_name} com o
+            banco de dados {connectionToRemove?.database_name}?
+          </Label>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary">
+                Não
+              </Button>
+            </DialogClose>
+            <Button onClick={submitRemoveConnection}>Sim</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Sidebar>

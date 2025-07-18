@@ -27,15 +27,30 @@ export async function POST(req: NextRequest) {
         );
     }
 
+    const connectionConfig =
+      client === "mssql"
+        ? {
+            server: connection.host,
+            user: connection.username,
+            password: connection.password,
+            database: connection.database_name,
+            options: {
+              port: Number(connection.port),
+              enableArithAbort: true,
+              trustServerCertificate: true,
+            },
+          }
+        : {
+            host: connection.host,
+            port: Number(connection.port),
+            user: connection.username,
+            password: connection.password,
+            database: connection.database_name,
+          };
+
     const db = knex({
       client,
-      connection: {
-        host: connection.host,
-        port: Number(connection.port),
-        user: connection.username,
-        password: connection.password,
-        database: connection.database_name,
-      },
+      connection: connectionConfig,
     });
 
     let result = {};

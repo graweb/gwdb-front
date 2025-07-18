@@ -66,6 +66,36 @@ export function useConnections() {
     }
   }
 
+  async function removeConnection(data: Connection | null) {
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      const res = await fetch("/api/connections", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!res.ok) {
+        throw new Error("Erro ao remover a conexão.");
+      }
+
+      setSuccess(true);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Erro desconhecido");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
     fetchConnections();
   }, []);
@@ -76,6 +106,7 @@ export function useConnections() {
     errorConnection,
     success,
     createConnection,
+    removeConnection,
     refetchConnections: fetchConnections,
   };
 }
