@@ -1,4 +1,7 @@
-export type TableObject = { TABLE_NAME: string };
+export type TableObject = {
+  TABLE_NAME: string;
+  COLUMNS: string[];
+};
 export type ViewObject = { VIEW_NAME: string };
 export type ProcedureObject = { ROUTINE_NAME: string };
 export type TriggerObject = { TRIGGER_NAME: string };

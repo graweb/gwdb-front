@@ -82,6 +82,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { theme, setTheme } = useTheme();
   const { objects, loadingObjects, errorObjects } = useDatabaseObjects();
   const { connection, setConnection } = useActiveConnection();
+
   const [isModalRemoveOpen, setIsModalRemoveOpen] = useState(false);
   const [selectedConnection, setSelectedConnection] =
     useState<Connection | null>(null);

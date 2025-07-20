@@ -77,6 +77,22 @@ export async function POST(req: NextRequest) {
         TABLE_NAME: t[tableKey],
       }));
 
+      const enrichedTables = await Promise.all(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        tables.map(async (t: any) => {
+          const [cols] = await db.raw(
+            `SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?`,
+            [dbName, t.TABLE_NAME]
+          );
+
+          return {
+            ...t,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            COLUMNS: cols.map((c: any) => c.COLUMN_NAME),
+          };
+        })
+      );
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const views = rawViews.map((v: any) => ({
         TABLE_NAME: v[tableKey],
@@ -100,7 +116,7 @@ export async function POST(req: NextRequest) {
       );
 
       result = {
-        tables,
+        tables: enrichedTables,
         views,
         procedures,
         triggers,
@@ -112,6 +128,19 @@ export async function POST(req: NextRequest) {
         .select("table_name")
         .from("information_schema.tables")
         .where({ table_schema: "public", table_type: "BASE TABLE" });
+
+      const enrichedTables = await Promise.all(
+        tables.map(async (t) => {
+          const cols = await db("information_schema.columns")
+            .select("column_name")
+            .where({ table_schema: "public", table_name: t.table_name });
+
+          return {
+            TABLE_NAME: t.table_name,
+            COLUMNS: cols.map((c) => c.column_name),
+          };
+        })
+      );
 
       const views = await db
         .select("table_name")
@@ -147,7 +176,7 @@ export async function POST(req: NextRequest) {
         `);
 
       result = {
-        tables,
+        tables: enrichedTables,
         views,
         procedures,
         triggers,
@@ -161,6 +190,17 @@ export async function POST(req: NextRequest) {
         .where({ type: "table" })
         .andWhereNot("name", "like", "sqlite_%");
 
+      const enrichedTables = await Promise.all(
+        tables.map(async (t) => {
+          const columnsInfo = await db.raw(`PRAGMA table_info(${t.name})`);
+          return {
+            TABLE_NAME: t.name,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            COLUMNS: columnsInfo.map((col: any) => col.name),
+          };
+        })
+      );
+
       const views = await db
         .select("name")
         .from("sqlite_master")
@@ -172,7 +212,7 @@ export async function POST(req: NextRequest) {
         .where({ type: "index" });
 
       result = {
-        tables,
+        tables: enrichedTables,
         views,
         procedures: [], // SQLite não tem procedures
         triggers: [], // pode ser lido via `sqlite_master` também se desejar
@@ -225,8 +265,24 @@ export async function POST(req: NextRequest) {
       const triggers = getRecordset(triggersRes);
       const indexes = getRecordset(indexesRes);
 
+      const enrichedTables = await Promise.all(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        tables.map(async (t: any) => {
+          const colRes = await db.raw(`
+          SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${t.TABLE_NAME}'
+        `);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const columns = getRecordset(colRes).map((c: any) => c.COLUMN_NAME);
+
+          return {
+            ...t,
+            COLUMNS: columns,
+          };
+        })
+      );
+
       result = {
-        tables,
+        tables: enrichedTables,
         views,
         procedures,
         triggers,
