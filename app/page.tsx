@@ -254,15 +254,17 @@ export default function Page() {
             />
           </div>
 
-          <div className="flex-1 min-h-[200px] border rounded-md overflow-auto">
+          <div className="@container/main flex flex-1 flex-col gap-2 border rounded-md">
             {loadingQuery ? (
               <Loader2Icon className="animate-spin size-4 text-muted-foreground" />
             ) : connection !== null &&
               resultQuery.length > 0 &&
               columnDefs.length > 0 ? (
-              <DataTable columns={columnDefs} data={resultQuery} />
+              <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+                <DataTable columns={columnDefs} data={resultQuery} />
+              </div>
             ) : (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground p-2">
                 Nenhum resultado encontrado.
               </p>
             )}
