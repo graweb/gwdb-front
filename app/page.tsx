@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useTheme } from "next-themes";
-import { Play, FileCode2, Loader2Icon } from "lucide-react";
+import { Play, FileCode, Loader2Icon } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { useActiveConnection } from "@/hooks/useActiveConnection";
 import { useExecuteQuery } from "@/hooks/useExecuteQuery";
@@ -13,7 +13,6 @@ import { sqlKeywords } from "@/lib/sql-keywords";
 import {
   Breadcrumb,
   BreadcrumbItem,
-  BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
@@ -213,10 +212,10 @@ export default function Page() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    disabled={!connection?.connection_name}
                     variant="outline"
                     size="icon"
                     className="size-8"
+                    disabled={!connection?.connection_name}
                     onClick={() => handleExecuteQuery()}
                   >
                     <Play />
@@ -226,23 +225,34 @@ export default function Page() {
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" size="icon" className="size-8">
-                    <FileCode2 />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="size-8"
+                    disabled={!connection?.connection_name}
+                  >
+                    <FileCode />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Abrir</TooltipContent>
               </Tooltip>
-              <BreadcrumbItem className="hidden md:block">
-                <BreadcrumbLink href="#">All Inboxes</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="hidden md:block" />
-              <BreadcrumbItem>
-                <BreadcrumbPage>Inbox</BreadcrumbPage>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="hidden md:block" />
-              <BreadcrumbItem>
-                <BreadcrumbPage>{connection?.connection_name}</BreadcrumbPage>
-              </BreadcrumbItem>
+              {!!connection?.connection_name && (
+                <>
+                  {/* <BreadcrumbItem className="hidden md:block">
+                    <BreadcrumbLink href="#">All Inboxes</BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator className="hidden md:block" /> */}
+                  <BreadcrumbItem>
+                    <BreadcrumbPage>Conectado em</BreadcrumbPage>
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator className="hidden md:block" />
+                  <BreadcrumbItem>
+                    <BreadcrumbPage className="font-bold">
+                      {connection?.connection_name}
+                    </BreadcrumbPage>
+                  </BreadcrumbItem>
+                </>
+              )}
             </BreadcrumbList>
           </Breadcrumb>
         </header>
