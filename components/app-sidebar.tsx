@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useTheme } from "next-themes";
 import { useActiveConnection } from "@/hooks/useActiveConnection";
 import { useDatabaseObjects } from "@/hooks/useDatabaseObjects";
+import { toast } from "sonner";
 import {
   Command,
   PlusCircle,
@@ -80,9 +81,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   } = useConnections();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { theme, setTheme } = useTheme();
-  const { objects, loadingObjects, errorObjects } = useDatabaseObjects();
-  const { connection, setConnection } = useActiveConnection();
-
+  const { objects, loadingObjects, errorObjects, resetObjects } =
+    useDatabaseObjects();
+  const { connection, setConnection, resetActiveConnection } =
+    useActiveConnection();
   const [isModalRemoveOpen, setIsModalRemoveOpen] = useState(false);
   const [selectedConnection, setSelectedConnection] =
     useState<Connection | null>(null);
@@ -104,6 +106,44 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     setIsModalRemoveOpen(false);
     refetchConnections();
   };
+
+  const connectDatabase = async (conn: Connection) => {
+    try {
+      await testConnection(conn);
+      setConnection(conn);
+      toast.success(`Conectado ao banco ${conn.database_name}`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? `Erro de conexão, verifique se o banco de dados etá iniciado`
+          : "Erro desconhecido"
+      );
+    }
+  };
+
+  async function testConnection(conn: Connection) {
+    try {
+      const res = await fetch("/api/objects", {
+        method: "POST",
+        body: JSON.stringify({ connection: conn }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const json = await res.json();
+
+      if (!json.success) {
+        throw new Error(json.error || "Erro ao conectar");
+      }
+
+      return true;
+    } catch (error) {
+      throw new Error(
+        error instanceof Error ? error.message : "Erro desconhecido"
+      );
+    }
+  }
 
   return (
     <Sidebar
@@ -156,9 +196,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter>
+        {/* <SidebarFooter>
           <NavUser user={data.user} />
-        </SidebarFooter>
+        </SidebarFooter> */}
       </Sidebar>
 
       {/* This is the second sidebar */}
@@ -198,20 +238,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </div>
               )}
 
-              {errorConnection && (
-                <p className="text-red-500">{errorConnection}</p>
-              )}
-
-              {!loadingConnection &&
-                !errorConnection &&
-                connections.length === 0 && (
-                  <div className="flex justify-center py-4">
-                    <span className="text-sm text-muted-foreground">
-                      Nenhuma conexão encontrada
-                    </span>
-                  </div>
-                )}
-
               {connection ? (
                 // Exibe objetos do banco
                 <>
@@ -241,8 +267,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                               size="icon"
                               className="size-8 cursor-pointer"
                               onClick={() => {
+                                resetObjects();
                                 setConnection(null);
                                 refetchConnections();
+                                resetActiveConnection();
                               }}
                             >
                               <Unplug />
@@ -380,7 +408,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 variant="outline"
                                 size="icon"
                                 className="size-8 cursor-pointer"
-                                onClick={() => setConnection(conn)}
+                                onClick={() => connectDatabase(conn)}
                               >
                                 <Plug />
                               </Button>

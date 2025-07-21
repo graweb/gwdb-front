@@ -17,16 +17,15 @@ const db = new Database(dbPath);
 db.exec(`
   CREATE TABLE IF NOT EXISTS connections (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    connection_name TEXT,
-    connection_type TEXT,
+    connection_name TEXT NOT NULL,
+    connection_type TEXT NOT NULL,
     server TEXT,
     port TEXT,
     database_name TEXT,
     username TEXT,
-    password TEXT
+    password TEXT,
+    file_path TEXT
   )
 `);
-
-console.log("[init-db] Banco SQLite inicializado com sucesso.");
 
 export default db;

@@ -18,6 +18,9 @@ export function useDatabaseObjects() {
       try {
         const res = await fetch("/api/objects", {
           method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
           body: JSON.stringify({ connection }),
         });
         const json = await res.json();
@@ -37,5 +40,10 @@ export function useDatabaseObjects() {
     fetchObjects();
   }, [connection]);
 
-  return { objects, loadingObjects, errorObjects };
+  const resetObjects = () => {
+    setObjects(null);
+    setError(null);
+  };
+
+  return { objects, loadingObjects, errorObjects, resetObjects };
 }

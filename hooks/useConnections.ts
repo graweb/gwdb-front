@@ -31,11 +31,12 @@ export function useConnections() {
   async function createConnection(data: {
     connection_name: string;
     connection_type: string;
-    server: string;
-    port: string;
-    database_name: string;
-    username: string;
-    password: string;
+    server?: string;
+    port?: string;
+    database_name?: string;
+    username?: string;
+    password?: string;
+    file_path?: string;
   }) {
     setLoading(true);
     setError(null);
@@ -70,11 +71,12 @@ export function useConnections() {
     data: {
       connection_name: string;
       connection_type: string;
-      server: string;
-      port: string;
-      database_name: string;
-      username: string;
-      password: string;
+      server?: string;
+      port?: string;
+      database_name?: string;
+      username?: string;
+      password?: string;
+      file_path?: string;
     },
     id: number
   ) {
@@ -141,6 +143,10 @@ export function useConnections() {
     }
   }
 
+  const resetConnections = () => {
+    setConnections([]);
+  };
+
   useEffect(() => {
     fetchConnections();
   }, []);
@@ -154,5 +160,6 @@ export function useConnections() {
     updateConnection,
     removeConnection,
     refetchConnections: fetchConnections,
+    resetConnections,
   };
 }

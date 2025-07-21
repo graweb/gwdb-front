@@ -15,8 +15,8 @@ export async function POST(req: Request) {
   const stmt = db.prepare(`
     INSERT INTO connections (
       connection_name, connection_type, server,
-      port, database_name, username, password
-    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      port, database_name, username, password, file_path
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const result = stmt.run(
@@ -26,7 +26,8 @@ export async function POST(req: Request) {
     data.port,
     data.database_name,
     data.username,
-    encryptedPassword
+    encryptedPassword,
+    data.file_path
   );
 
   return NextResponse.json(result.changes > 0);
@@ -45,7 +46,8 @@ export async function PUT(req: Request) {
       port = ?,
       database_name = ?,
       username = ?,
-      password = ?
+      password = ?,
+      file_path = ?
     WHERE id = ?
   `);
 
@@ -57,7 +59,8 @@ export async function PUT(req: Request) {
     data.database_name,
     data.username,
     encryptedPassword,
-    data.id
+    data.id,
+    data.file_path
   );
 
   return NextResponse.json(result.changes > 0);

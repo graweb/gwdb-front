@@ -50,19 +50,22 @@ export function ConnectionForm({ onSuccess, connection }: Props) {
       database_name: "",
       username: "",
       password: "",
+      file_path: "",
     },
   });
 
+  const selectedType = form.watch("connection_type");
+
   useEffect(() => {
     if (connection) {
-      form.setValue("connection_name", connection.connection_name);
-      form.setValue("connection_type", connection.connection_type);
-      form.setValue("server", connection.server);
-      form.setValue("port", connection.port);
-      form.setValue("database_name", connection.database_name);
-      form.setValue("username", connection.username);
-      // por segurança, deixamos a senha em branco
-      form.setValue("password", "");
+      form.setValue("connection_name", connection.connection_name ?? "");
+      form.setValue("connection_type", connection.connection_type ?? "");
+      form.setValue("server", connection.server ?? "");
+      form.setValue("port", connection.port ?? "");
+      form.setValue("database_name", connection.database_name ?? "");
+      form.setValue("username", connection.username ?? "");
+      form.setValue("file_path", connection.file_path ?? "");
+      form.setValue("password", connection.password ?? "");
     }
   }, [connection, form]);
 
@@ -143,71 +146,96 @@ export function ConnectionForm({ onSuccess, connection }: Props) {
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="server"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Servidor</FormLabel>
-              <FormControl>
-                <Input placeholder="localhost" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="port"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Porta</FormLabel>
-              <FormControl>
-                <Input placeholder="3306" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="database_name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Nome do banco</FormLabel>
-              <FormControl>
-                <Input placeholder="database" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="username"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Usuário</FormLabel>
-              <FormControl>
-                <Input placeholder="root" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Senha</FormLabel>
-              <FormControl>
-                <Input placeholder="*******" type="password" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* Campo específico para SQLite */}
+        {selectedType === "sqlite" && (
+          <FormField
+            control={form.control}
+            name="file_path"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Caminho do arquivo SQLite</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="/caminho/para/database.sqlite"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {/* Campos ocultos quando SQLite é selecionado */}
+        {selectedType !== "sqlite" && (
+          <>
+            <FormField
+              control={form.control}
+              name="server"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Servidor</FormLabel>
+                  <FormControl>
+                    <Input placeholder="localhost" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="port"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Porta</FormLabel>
+                  <FormControl>
+                    <Input placeholder="3306" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="database_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome do banco</FormLabel>
+                  <FormControl>
+                    <Input placeholder="database" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="username"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Usuário</FormLabel>
+                  <FormControl>
+                    <Input placeholder="root" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Senha</FormLabel>
+                  <FormControl>
+                    <Input placeholder="*******" type="password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        )}
 
         <DialogFooter className="mt-4">
           <Button

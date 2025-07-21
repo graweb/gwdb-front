@@ -136,6 +136,15 @@ export default function Page() {
     return () => provider.dispose();
   }, [objects]);
 
+  useEffect(() => {
+    if (connection === null) {
+      setQuery("");
+      if (editorRef.current) {
+        editorRef.current.setValue("-- digite sua query");
+      }
+    }
+  }, [connection]);
+
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
@@ -248,7 +257,9 @@ export default function Page() {
           <div className="flex-1 min-h-[200px] border rounded-md overflow-auto">
             {loadingQuery ? (
               <Loader2Icon className="animate-spin size-4 text-muted-foreground" />
-            ) : resultQuery.length > 0 && columnDefs.length > 0 ? (
+            ) : connection !== null &&
+              resultQuery.length > 0 &&
+              columnDefs.length > 0 ? (
               <DataTable columns={columnDefs} data={resultQuery} />
             ) : (
               <p className="text-sm text-muted-foreground">
