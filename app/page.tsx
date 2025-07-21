@@ -46,8 +46,13 @@ export default function Page() {
   const monacoRef = useRef<typeof monacoType | null>(null);
   const connectionRef = useRef(connection);
 
-  const { executeQuery, loadingQuery, resultQuery, columnsQuery } =
-    useExecuteQuery();
+  const {
+    executeQuery,
+    resetQueryResult,
+    loadingQuery,
+    resultQuery,
+    columnsQuery,
+  } = useExecuteQuery();
 
   const [columnDefs, setColumnDefs] = useState<
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -139,11 +144,12 @@ export default function Page() {
   useEffect(() => {
     if (connection === null) {
       setQuery("");
+      resetQueryResult();
       if (editorRef.current) {
         editorRef.current.setValue("-- digite sua query");
       }
     }
-  }, [connection]);
+  }, [connection, resetQueryResult]);
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
@@ -250,7 +256,7 @@ export default function Page() {
               theme={monacoTheme}
               onMount={handleEditorDidMount}
               onChange={(val) => setQuery(val || "")}
-              options={{ fontSize: 14, minimap: { enabled: false } }}
+              options={{ fontSize: 14, minimap: { enabled: true } }}
             />
           </div>
 
@@ -260,7 +266,7 @@ export default function Page() {
             ) : connection !== null &&
               resultQuery.length > 0 &&
               columnDefs.length > 0 ? (
-              <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+              <div className="flex flex-col gap-4 py-2 p-2">
                 <DataTable columns={columnDefs} data={resultQuery} />
               </div>
             ) : (

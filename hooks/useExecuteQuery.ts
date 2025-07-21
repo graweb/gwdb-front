@@ -1,6 +1,5 @@
-// src/hooks/useExecuteQuery.ts
 import { Connection } from "@/types/connection";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { toast } from "sonner";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -8,6 +7,7 @@ type QueryResultRow = Record<string, any>;
 
 interface UseExecuteQueryReturn {
   executeQuery: (query: string, connection: Connection) => Promise<void>;
+  resetQueryResult: () => void;
   loadingQuery: boolean;
   errorQuery: string | null;
   resultQuery: QueryResultRow[];
@@ -52,8 +52,14 @@ export function useExecuteQuery(): UseExecuteQueryReturn {
     }
   };
 
+  const resetQueryResult = useCallback(() => {
+    setResult([]);
+    setColumns([]);
+  }, []);
+
   return {
     executeQuery,
+    resetQueryResult,
     loadingQuery,
     errorQuery,
     resultQuery,
