@@ -1,4 +1,5 @@
 // src/hooks/useExecuteQuery.ts
+import { Connection } from "@/types/connection";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -6,8 +7,7 @@ import { toast } from "sonner";
 type QueryResultRow = Record<string, any>;
 
 interface UseExecuteQueryReturn {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  executeQuery: (query: string, connection: any) => Promise<void>;
+  executeQuery: (query: string, connection: Connection) => Promise<void>;
   loadingQuery: boolean;
   errorQuery: string | null;
   resultQuery: QueryResultRow[];
@@ -20,8 +20,7 @@ export function useExecuteQuery(): UseExecuteQueryReturn {
   const [loadingQuery, setLoading] = useState(false);
   const [errorQuery, setError] = useState<string | null>(null);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const executeQuery = async (query: string, connection: any) => {
+  const executeQuery = async (query: string, connection: Connection) => {
     setLoading(true);
     setError(null);
 
