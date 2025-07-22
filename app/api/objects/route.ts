@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import knex from "knex";
 import { decrypt } from "@/lib/crypto";
@@ -49,16 +50,30 @@ export async function POST(req: NextRequest) {
             database: connection.database_name,
           };
 
-    const db = knex({
-      client,
-      connection: connectionConfig,
-    });
-
+    const db = knex({ client, connection: connectionConfig });
+    const dbName = connection.database_name;
     let result = {};
 
-    if (client === "mysql2") {
-      const dbName = connection.database_name;
+    const parseColumns = (
+      rows: any[],
+      nameKey: string,
+      typeKey: string,
+      lengthKey?: string,
+      precisionKey?: string,
+      scaleKey?: string,
+      fullTypeKey?: string
+    ) => {
+      return rows.map((c) => ({
+        name: c[nameKey],
+        type: c[typeKey],
+        fullType: fullTypeKey ? c[fullTypeKey] : undefined,
+        length: lengthKey ? c[lengthKey] ?? undefined : undefined,
+        precision: precisionKey ? c[precisionKey] ?? undefined : undefined,
+        scale: scaleKey ? c[scaleKey] ?? undefined : undefined,
+      }));
+    };
 
+    if (client === "mysql2") {
       const [rawTables] = await db.raw(
         `SHOW FULL TABLES WHERE Table_type = 'BASE TABLE'`
       );
@@ -66,37 +81,37 @@ export async function POST(req: NextRequest) {
         `SHOW FULL TABLES WHERE Table_type = 'VIEW'`
       );
 
-      // Extrai o nome da coluna que contém o nome da tabela (ex: "Tables_in_nomebanco")
       const tableKey =
         Object.keys(rawTables[0] || {}).find((key) =>
           key.startsWith("Tables_in_")
         ) || "TABLE_NAME";
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const tables = rawTables.map((t: any) => ({
-        TABLE_NAME: t[tableKey],
-      }));
+      const tables = rawTables.map((t: any) => ({ TABLE_NAME: t[tableKey] }));
+      const views = rawViews.map((v: any) => ({ VIEW_NAME: v[tableKey] }));
 
       const enrichedTables = await Promise.all(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         tables.map(async (t: any) => {
           const [cols] = await db.raw(
-            `SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?`,
+            `SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, CHARACTER_MAXIMUM_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE 
+             FROM information_schema.COLUMNS 
+             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?`,
             [dbName, t.TABLE_NAME]
           );
 
           return {
-            ...t,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            COLUMNS: cols.map((c: any) => c.COLUMN_NAME),
+            TABLE_NAME: t.TABLE_NAME,
+            COLUMNS: parseColumns(
+              cols,
+              "COLUMN_NAME",
+              "DATA_TYPE",
+              "CHARACTER_MAXIMUM_LENGTH",
+              "NUMERIC_PRECISION",
+              "NUMERIC_SCALE",
+              "COLUMN_TYPE"
+            ),
           };
         })
       );
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const views = rawViews.map((v: any) => ({
-        TABLE_NAME: v[tableKey],
-      }));
 
       const [procedures] = await db.raw(
         `SELECT ROUTINE_NAME FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA = ?`,
@@ -124,99 +139,103 @@ export async function POST(req: NextRequest) {
         indexes,
       };
     } else if (client === "pg") {
-      const tables = await db
+      const tables = await db("information_schema.tables")
         .select("table_name")
-        .from("information_schema.tables")
         .where({ table_schema: "public", table_type: "BASE TABLE" });
 
       const enrichedTables = await Promise.all(
         tables.map(async (t) => {
           const cols = await db("information_schema.columns")
-            .select("column_name")
+            .select(
+              "column_name",
+              "data_type",
+              "udt_name",
+              "character_maximum_length",
+              "numeric_precision",
+              "numeric_scale"
+            )
             .where({ table_schema: "public", table_name: t.table_name });
 
           return {
             TABLE_NAME: t.table_name,
-            COLUMNS: cols.map((c) => c.column_name),
+            COLUMNS: cols.map((c) => ({
+              name: c.column_name,
+              type: c.data_type,
+              fullType: c.udt_name,
+              length: c.character_maximum_length ?? undefined,
+              precision: c.numeric_precision ?? undefined,
+              scale: c.numeric_scale ?? undefined,
+            })),
           };
         })
       );
 
-      const views = await db
-        .select("table_name")
-        .from("information_schema.views")
+      const views = await db("information_schema.views")
+        .select("table_name as VIEW_NAME")
         .where({ table_schema: "public" });
-
-      const procedures = await db
-        .select("routine_name")
-        .from("information_schema.routines")
+      const procedures = await db("information_schema.routines")
+        .select("routine_name as ROUTINE_NAME")
         .where({ specific_schema: "public" });
-
-      const triggers = await db
-        .select("trigger_name", "event_object_table")
-        .from("information_schema.triggers")
+      const triggers = await db("information_schema.triggers")
+        .select("trigger_name as TRIGGER_NAME")
         .where({ trigger_schema: "public" });
 
       const indexes = await db.raw(`
-            SELECT
-            t.relname AS table_name,
-            i.relname AS index_name,
-            a.attname AS column_name
-            FROM
-            pg_class t,
-            pg_class i,
-            pg_index ix,
-            pg_attribute a
-            WHERE
-            t.oid = ix.indrelid
-            AND i.oid = ix.indexrelid
-            AND a.attrelid = t.oid
-            AND a.attnum = ANY(ix.indkey)
-            AND t.relkind = 'r'
-        `);
+        SELECT i.relname AS INDEX_NAME, t.relname AS TABLE_NAME
+        FROM pg_class t, pg_class i, pg_index ix, pg_attribute a
+        WHERE t.oid = ix.indrelid AND i.oid = ix.indexrelid
+          AND a.attrelid = t.oid AND a.attnum = ANY(ix.indkey) AND t.relkind = 'r'
+      `);
 
       result = {
         tables: enrichedTables,
         views,
         procedures,
         triggers,
-        events: [], // PostgreSQL usa cron/pgagent, não há `EVENTS`
+        events: [],
         indexes: indexes.rows,
       };
     } else if (client === "sqlite3") {
-      const tables = await db
+      const tables = await db("sqlite_master")
         .select("name")
-        .from("sqlite_master")
         .where({ type: "table" })
         .andWhereNot("name", "like", "sqlite_%");
 
       const enrichedTables = await Promise.all(
         tables.map(async (t) => {
-          const columnsInfo = await db.raw(`PRAGMA table_info(${t.name})`);
+          const pragma = await db.raw(`PRAGMA table_info(${t.name})`);
+          const columns = pragma.map((col: any) => {
+            const typeMatch = col.type.match(/(\w+)(?:\((\d+)(?:,(\d+))?\))?/);
+            return {
+              name: col.name,
+              type: typeMatch?.[1] || col.type,
+              fullType: col.type,
+              length: typeMatch?.[2] ? parseInt(typeMatch[2]) : undefined,
+              precision: typeMatch?.[2] ? parseInt(typeMatch[2]) : undefined,
+              scale: typeMatch?.[3] ? parseInt(typeMatch[3]) : undefined,
+            };
+          });
+
           return {
             TABLE_NAME: t.name,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            COLUMNS: columnsInfo.map((col: any) => col.name),
+            COLUMNS: columns,
           };
         })
       );
 
-      const views = await db
-        .select("name")
-        .from("sqlite_master")
+      const views = await db("sqlite_master")
+        .select("name as VIEW_NAME")
         .where({ type: "view" });
-
-      const indexes = await db
-        .select("name", "tbl_name")
-        .from("sqlite_master")
+      const indexes = await db("sqlite_master")
+        .select("name as INDEX_NAME", "tbl_name as TABLE_NAME")
         .where({ type: "index" });
 
       result = {
         tables: enrichedTables,
         views,
-        procedures: [], // SQLite não tem procedures
-        triggers: [], // pode ser lido via `sqlite_master` também se desejar
-        events: [], // não possui eventos
+        procedures: [],
+        triggers: [],
+        events: [],
         indexes,
       };
     } else if (client === "mssql") {
@@ -226,59 +245,59 @@ export async function POST(req: NextRequest) {
         if (typeof res === "object" && res !== null && "recordset" in res) {
           return (res as { recordset: T[] }).recordset;
         }
-
-        if (Array.isArray(res)) {
-          return res as T[];
-        }
-
-        return [];
+        return Array.isArray(res) ? res : [];
       };
 
-      const tablesRes = await db.raw(`
-        SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'
-      `);
-      const viewsRes = await db.raw(`
-        SELECT TABLE_NAME FROM INFORMATION_SCHEMA.VIEWS
-      `);
-      const proceduresRes = await db.raw(`
-        SELECT ROUTINE_NAME FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_TYPE = 'PROCEDURE'
-      `);
-      const triggersRes = await db.raw(`
-        SELECT name AS trigger_name, OBJECT_NAME(parent_id) AS TABLE_NAME
-        FROM sys.triggers
-        WHERE parent_class_desc = 'OBJECT_OR_COLUMN'
-      `);
-      const indexesRes = await db.raw(`
-        SELECT 
-          ind.name AS INDEX_NAME,
-          obj.name AS TABLE_NAME
-        FROM 
-          sys.indexes ind
-        INNER JOIN sys.objects obj ON ind.object_id = obj.object_id
-        WHERE 
-          obj.type = 'U' AND ind.is_primary_key = 0 AND ind.is_unique = 0
-      `);
-
-      const tables = getRecordset(tablesRes);
-      const views = getRecordset(viewsRes);
-      const procedures = getRecordset(proceduresRes);
-      const triggers = getRecordset(triggersRes);
-      const indexes = getRecordset(indexesRes);
+      const tables = getRecordset(
+        await db.raw(
+          `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'`
+        )
+      );
 
       const enrichedTables = await Promise.all(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         tables.map(async (t: any) => {
-          const colRes = await db.raw(`
-          SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${t.TABLE_NAME}'
-        `);
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const columns = getRecordset(colRes).map((c: any) => c.COLUMN_NAME);
+          const columns = getRecordset(
+            await db.raw(`
+              SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE
+              FROM INFORMATION_SCHEMA.COLUMNS
+              WHERE TABLE_NAME = '${t.TABLE_NAME}'`)
+          );
 
           return {
-            ...t,
-            COLUMNS: columns,
+            TABLE_NAME: t.TABLE_NAME,
+            COLUMNS: parseColumns(
+              columns,
+              "COLUMN_NAME",
+              "DATA_TYPE",
+              "CHARACTER_MAXIMUM_LENGTH",
+              "NUMERIC_PRECISION",
+              "NUMERIC_SCALE"
+            ),
           };
         })
+      );
+
+      const views = getRecordset(
+        await db.raw(
+          `SELECT TABLE_NAME as VIEW_NAME FROM INFORMATION_SCHEMA.VIEWS`
+        )
+      );
+      const procedures = getRecordset(
+        await db.raw(
+          `SELECT ROUTINE_NAME FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_TYPE = 'PROCEDURE'`
+        )
+      );
+      const triggers = getRecordset(
+        await db.raw(`
+        SELECT name AS TRIGGER_NAME FROM sys.triggers WHERE parent_class_desc = 'OBJECT_OR_COLUMN'`)
+      );
+      const indexes = getRecordset(
+        await db.raw(`
+        SELECT ind.name AS INDEX_NAME, obj.name AS TABLE_NAME
+        FROM sys.indexes ind
+        INNER JOIN sys.objects obj ON ind.object_id = obj.object_id
+        WHERE obj.type = 'U' AND ind.is_primary_key = 0 AND ind.is_unique = 0
+      `)
       );
 
       result = {
@@ -292,7 +311,6 @@ export async function POST(req: NextRequest) {
     }
 
     await db.destroy();
-
     return NextResponse.json({ success: true, data: result });
   } catch (error) {
     const message =

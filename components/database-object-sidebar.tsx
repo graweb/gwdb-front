@@ -18,6 +18,8 @@ type DatabaseObjectSideBarProps<T> = {
   title: string;
   items: T[];
   renderItem: (item: T, index: number) => React.ReactNode;
+  getChildren?: (item: T) => unknown[];
+  renderChild?: (child: unknown, index: number, parent: T) => React.ReactNode;
 };
 
 export function DatabaseObjectSideBar<T>({
@@ -25,6 +27,8 @@ export function DatabaseObjectSideBar<T>({
   title,
   items,
   renderItem,
+  getChildren,
+  renderChild,
 }: DatabaseObjectSideBarProps<T>) {
   return (
     <SidebarMenu>
@@ -41,11 +45,38 @@ export function DatabaseObjectSideBar<T>({
           </CollapsibleTrigger>
           <CollapsibleContent>
             <SidebarMenuSub>
-              {items.map((item, index) => (
-                <SidebarMenuSubItem key={index}>
-                  {renderItem(item, index)}
-                </SidebarMenuSubItem>
-              ))}
+              {items.map((item, index) => {
+                const children = getChildren?.(item);
+                const hasChildren = children && children.length > 0;
+
+                return (
+                  <SidebarMenuSubItem key={index}>
+                    {hasChildren ? (
+                      <Collapsible className="group/nested">
+                        <CollapsibleTrigger asChild>
+                          <SidebarMenuButton className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-2">
+                              {renderItem(item, index)}
+                            </div>
+                            <ChevronDown className="transition-transform duration-300 ease-in-out group-data-[state=open]/nested:rotate-180" />
+                          </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <SidebarMenuSub>
+                            {children.map((child, childIndex) => (
+                              <SidebarMenuSubItem key={childIndex}>
+                                {renderChild?.(child, childIndex, item)}
+                              </SidebarMenuSubItem>
+                            ))}
+                          </SidebarMenuSub>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    ) : (
+                      renderItem(item, index)
+                    )}
+                  </SidebarMenuSubItem>
+                );
+              })}
             </SidebarMenuSub>
           </CollapsibleContent>
         </SidebarMenuItem>

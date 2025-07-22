@@ -10,7 +10,7 @@ import {
   PlusCircle,
   Loader2Icon,
   SunMoon,
-  FolderSymlink,
+  TableProperties,
   Table2,
   ScanEye,
   Eye,
@@ -287,15 +287,29 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
                       {/* Tables */}
                       <DatabaseObjectSideBar
-                        icon={<FolderSymlink className="size-5" />}
+                        icon={<Table2 className="size-5" />}
                         title="Tabelas"
                         items={objects.tables ?? []}
                         renderItem={(t) => (
-                          <SidebarMenuButton>
-                            <Table2 />
+                          <>
+                            <TableProperties className="size-4" />
                             {t.TABLE_NAME}
-                          </SidebarMenuButton>
+                          </>
                         )}
+                        getChildren={(t) =>
+                          t.COLUMNS?.map((c) => {
+                            const length =
+                              c.length !== undefined
+                                ? `(${c.length})`
+                                : c.precision !== undefined &&
+                                  c.scale !== undefined
+                                ? `(${c.precision},${c.scale})`
+                                : "";
+
+                            return `${c.name} - ${c.type}${length}`;
+                          }) ?? []
+                        }
+                        renderChild={(c) => <>{c}</>}
                       />
 
                       {/* Views */}
