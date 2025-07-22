@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState } from "react";
@@ -209,10 +210,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       {/* This is the second sidebar */}
       {/* We disable collapsible and let it fill remaining space */}
       <Sidebar collapsible="none" className="hidden flex-1 md:flex">
-        <SidebarHeader className="gap-3.5 border-b p-4">
+        <SidebarHeader className="gap-3.5 border-b p-2">
           <div className="flex w-full items-center justify-between">
             <div className="text-foreground text-base font-medium">GWDB</div>
-            <Label className="flex items-center gap-2 text-sm">
+            <Label className="flex items-center text-sm">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -293,7 +294,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         renderItem={(t) => (
                           <>
                             <TableProperties className="size-4" />
-                            {t.TABLE_NAME}
+                            {t.TABLE_NAME.length > 20 ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="max-w-[180px] truncate inline-block cursor-default">
+                                    {t.TABLE_NAME.slice(0, 20)}...
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>{t.TABLE_NAME}</TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <span>{t.TABLE_NAME}</span>
+                            )}
                           </>
                         )}
                         getChildren={(t) =>
@@ -306,10 +318,32 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 ? `(${c.precision},${c.scale})`
                                 : "";
 
-                            return `${c.name} - ${c.type}${length}`;
+                            const fullText = `${c.name} - ${c.type}${length}`;
+                            const displayText =
+                              fullText.length > 30
+                                ? `${fullText.slice(0, 30)}...`
+                                : fullText;
+
+                            return {
+                              fullText,
+                              displayText,
+                            };
                           }) ?? []
                         }
-                        renderChild={(c) => <>{c}</>}
+                        renderChild={(ch: any) =>
+                          ch.fullText.length > 30 ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="max-w-[220px] truncate inline-block cursor-default">
+                                  {ch.displayText}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>{ch.fullText}</TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <span>{ch.fullText}</span>
+                          )
+                        }
                       />
 
                       {/* Views */}
@@ -320,7 +354,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         renderItem={(t) => (
                           <SidebarMenuButton>
                             <Eye />
-                            {t.VIEW_NAME}
+                            {t.VIEW_NAME.length > 20
+                              ? `${t.VIEW_NAME.slice(0, 20)}...`
+                              : t.VIEW_NAME}
                           </SidebarMenuButton>
                         )}
                       />
@@ -333,7 +369,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         renderItem={(t) => (
                           <SidebarMenuButton>
                             <ListStart />
-                            {t.ROUTINE_NAME}
+                            {t.ROUTINE_NAME.length > 20
+                              ? `${t.ROUTINE_NAME.slice(0, 20)}...`
+                              : t.ROUTINE_NAME}
                           </SidebarMenuButton>
                         )}
                       />
@@ -346,7 +384,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         renderItem={(t) => (
                           <SidebarMenuButton>
                             <Activity />
-                            {t.TRIGGER_NAME}
+                            {t.TRIGGER_NAME.length > 20
+                              ? `${t.TRIGGER_NAME.slice(0, 20)}...`
+                              : t.TRIGGER_NAME}
                           </SidebarMenuButton>
                         )}
                       />
@@ -359,7 +399,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         renderItem={(t) => (
                           <SidebarMenuButton>
                             <FileTerminal />
-                            {t.EVENT_NAME}
+                            {t.EVENT_NAME.length > 20
+                              ? `${t.EVENT_NAME.slice(0, 20)}...`
+                              : t.EVENT_NAME}
                           </SidebarMenuButton>
                         )}
                       />
@@ -372,9 +414,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         renderItem={(t) => (
                           <SidebarMenuButton>
                             <Key />
-                            {t.INDEX_NAME}
+                            {t.INDEX_NAME.length > 20
+                              ? `${t.INDEX_NAME.slice(0, 20)}...`
+                              : t.INDEX_NAME}
                             <span className="ml-1 text-xs text-muted-foreground">
-                              ({t.TABLE_NAME})
+                              (
+                              {t.TABLE_NAME.length > 20
+                                ? `${t.TABLE_NAME.slice(0, 20)}...`
+                                : t.TABLE_NAME}
+                              )
                             </span>
                           </SidebarMenuButton>
                         )}
