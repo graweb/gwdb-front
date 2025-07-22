@@ -1,12 +1,14 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   connectionFormSchema,
   ConnectionFormValues,
 } from "@/schemas/connection-schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Loader2Icon } from "lucide-react";
+import { Loader2Icon, EyeIcon, EyeOffIcon } from "lucide-react";
+import { encrypt, decrypt, isEncrypted } from "@/lib/crypto";
 import {
   Form,
   FormField,
@@ -28,7 +30,6 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { DialogFooter } from "@/components/ui/dialog";
 import { useConnections } from "@/hooks/useConnections";
-import { useEffect } from "react";
 import { Connection } from "@/types/connection";
 
 type Props = {
@@ -39,6 +40,8 @@ type Props = {
 export function ConnectionForm({ onSuccess, connection }: Props) {
   const { createConnection, updateConnection, loadingConnection } =
     useConnections();
+
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<ConnectionFormValues>({
     resolver: zodResolver(connectionFormSchema),
@@ -58,20 +61,31 @@ export function ConnectionForm({ onSuccess, connection }: Props) {
 
   useEffect(() => {
     if (connection) {
-      form.setValue("connection_name", connection.connection_name ?? "");
-      form.setValue("connection_type", connection.connection_type ?? "");
-      form.setValue("server", connection.server ?? "");
-      form.setValue("port", connection.port ?? "");
-      form.setValue("database_name", connection.database_name ?? "");
-      form.setValue("username", connection.username ?? "");
-      form.setValue("file_path", connection.file_path ?? "");
-      form.setValue("password", connection.password ?? "");
+      form.reset({
+        connection_name: connection.connection_name ?? "",
+        connection_type: connection.connection_type ?? "",
+        server: connection.server ?? "",
+        port: connection.port ?? "",
+        database_name: connection.database_name ?? "",
+        username: connection.username ?? "",
+        file_path: connection.file_path ?? "",
+        password: connection.password ?? "",
+      });
+    } else {
+      form.reset({
+        connection_name: "",
+        connection_type: "",
+        server: "",
+        port: "",
+        database_name: "",
+        username: "",
+        file_path: "",
+        password: "",
+      });
     }
   }, [connection, form]);
 
   const handleTypeChange = (value: string) => {
-    form.setValue("connection_type", value);
-
     const defaultPorts: Record<string, string> = {
       mysql: "3306",
       mariadb: "3306",
@@ -80,7 +94,8 @@ export function ConnectionForm({ onSuccess, connection }: Props) {
       sqlite: "",
     };
 
-    form.setValue("port", defaultPorts[value] || "");
+    form.setValue("connection_type", value ?? "");
+    form.setValue("port", defaultPorts[value] || connection?.port);
   };
 
   const onSubmit = async (values: ConnectionFormValues) => {
@@ -96,6 +111,24 @@ export function ConnectionForm({ onSuccess, connection }: Props) {
       onSuccess();
     } catch (error) {
       toast.error("Erro ao salvar conexão " + error);
+    }
+  };
+
+  const handleShowPassword = () => {
+    const currentPassword = form.getValues("password") ?? "";
+
+    if (!showPassword) {
+      if (isEncrypted(currentPassword)) {
+        const decrypted = decrypt(currentPassword);
+        form.setValue("password", decrypted);
+      }
+      setShowPassword(true);
+    } else {
+      if (!isEncrypted(currentPassword)) {
+        const encrypted = encrypt(currentPassword);
+        form.setValue("password", encrypted);
+      }
+      setShowPassword(false);
     }
   };
 
@@ -124,7 +157,6 @@ export function ConnectionForm({ onSuccess, connection }: Props) {
               <Select
                 value={field.value}
                 onValueChange={(value) => {
-                  field.onChange(value);
                   handleTypeChange(value);
                 }}
               >
@@ -141,7 +173,6 @@ export function ConnectionForm({ onSuccess, connection }: Props) {
                   <SelectItem value="sqlserver">SQL Server</SelectItem>
                 </SelectContent>
               </Select>
-              <FormMessage />
             </FormItem>
           )}
         />
@@ -224,15 +255,35 @@ export function ConnectionForm({ onSuccess, connection }: Props) {
             <FormField
               control={form.control}
               name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Senha</FormLabel>
-                  <FormControl>
-                    <Input placeholder="*******" type="password" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                return (
+                  <FormItem>
+                    <FormLabel>Senha</FormLabel>
+                    <div className="relative">
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type={showPassword ? "text" : "password"}
+                          placeholder="*******"
+                          className="pr-10"
+                        />
+                      </FormControl>
+                      <button
+                        type="button"
+                        onClick={handleShowPassword}
+                        className="absolute right-2 top-2.5 text-muted-foreground hover:text-foreground"
+                      >
+                        {showPassword ? (
+                          <EyeIcon className="w-4 h-4" />
+                        ) : (
+                          <EyeOffIcon className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
           </>
         )}

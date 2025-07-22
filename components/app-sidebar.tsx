@@ -88,6 +88,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [isModalRemoveOpen, setIsModalRemoveOpen] = useState(false);
   const [selectedConnection, setSelectedConnection] =
     useState<Connection | null>(null);
+  const [loadingOpenConnection, setLoadingOpenConnection] = useState(false);
 
   const handleModal = (conn: Connection, type: string) => {
     setSelectedConnection(conn);
@@ -123,6 +124,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   async function testConnection(conn: Connection) {
     try {
+      setLoadingOpenConnection(true);
       const res = await fetch("/api/objects", {
         method: "POST",
         body: JSON.stringify({ connection: conn }),
@@ -137,8 +139,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         throw new Error(json.error || "Erro ao conectar");
       }
 
+      setLoadingOpenConnection(false);
+
       return true;
     } catch (error) {
+      setLoadingOpenConnection(false);
       throw new Error(
         error instanceof Error ? error.message : "Erro desconhecido"
       );
@@ -409,8 +414,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 size="icon"
                                 className="size-8 cursor-pointer"
                                 onClick={() => connectDatabase(conn)}
+                                disabled={loadingOpenConnection}
                               >
-                                <Plug />
+                                {loadingOpenConnection ? (
+                                  <Loader2Icon className="animate-spin size-4 text-muted-foreground" />
+                                ) : (
+                                  <Plug />
+                                )}
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>Conectar</TooltipContent>
@@ -423,6 +433,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 size="icon"
                                 className="size-8 cursor-pointer"
                                 onClick={() => handleModal(conn, "edit")}
+                                disabled={loadingOpenConnection}
                               >
                                 <Edit />
                               </Button>
@@ -437,6 +448,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 size="icon"
                                 className="size-8 cursor-pointer"
                                 onClick={() => handleModal(conn, "delete")}
+                                disabled={loadingOpenConnection}
                               >
                                 <Trash />
                               </Button>
@@ -460,7 +472,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           if (!v) setSelectedConnection(null);
         }}
       >
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent
+          className="sm:max-w-[425px]"
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>
               {selectedConnection ? "Editar conexão" : "Nova conexão"}
@@ -478,7 +494,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </Dialog>
 
       <Dialog open={isModalRemoveOpen} onOpenChange={setIsModalRemoveOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent
+          className="sm:max-w-md"
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>Atenção</DialogTitle>
           </DialogHeader>
@@ -492,7 +512,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 Não
               </Button>
             </DialogClose>
-            <Button onClick={submitRemoveConnection}>Sim</Button>
+            <Button
+              onClick={submitRemoveConnection}
+              className="bg-red-800 text-white hover:bg-red-700 hover:text-white"
+            >
+              Sim
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1,6 +1,6 @@
 import db from "@/lib/init-db";
 import { NextResponse } from "next/server";
-import { encrypt } from "@/lib/crypto";
+import { encrypt, isEncrypted } from "@/lib/crypto";
 
 export async function GET() {
   const stmt = db.prepare("SELECT * FROM connections ORDER BY id DESC");
@@ -27,16 +27,16 @@ export async function POST(req: Request) {
     data.database_name,
     data.username,
     encryptedPassword,
-    data.file_path
+    data.file_path || null
   );
+
+  console.log(result);
 
   return NextResponse.json(result.changes > 0);
 }
 
 export async function PUT(req: Request) {
   const data = await req.json();
-
-  const encryptedPassword = encrypt(data.password);
 
   const stmt = db.prepare(`
     UPDATE connections SET
@@ -58,9 +58,9 @@ export async function PUT(req: Request) {
     data.port,
     data.database_name,
     data.username,
-    encryptedPassword,
-    data.id,
-    data.file_path
+    isEncrypted(data.password) ? data.password : encrypt(data.password),
+    data.file_path || null,
+    data.id
   );
 
   return NextResponse.json(result.changes > 0);

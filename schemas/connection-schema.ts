@@ -4,7 +4,6 @@ export const connectionFormSchema = z
   .object({
     connection_name: z.string().min(1, "Nome da conexão é obrigatório"),
     connection_type: z.string().min(1, "Tipo de conexão é obrigatório"),
-
     server: z.string().optional(),
     port: z.string().optional(),
     database_name: z.string().optional(),
