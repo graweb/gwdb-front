@@ -151,11 +151,15 @@ export function ConnectionForm({ onSuccess, connection }: Props) {
         <FormField
           control={form.control}
           name="connection_type"
-          render={({ field }) => (
+          render={() => (
             <FormItem>
               <FormLabel>Banco de dados</FormLabel>
               <Select
-                value={field.value}
+                value={
+                  form.watch("connection_type") ||
+                  connection?.connection_type ||
+                  ""
+                }
                 onValueChange={(value) => {
                   handleTypeChange(value);
                 }}
