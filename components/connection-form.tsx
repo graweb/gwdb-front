@@ -28,7 +28,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { DialogFooter } from "@/components/ui/dialog";
+import { DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { useConnections } from "@/hooks/useConnections";
 import { Connection } from "@/types/connection";
 
@@ -293,14 +293,11 @@ export function ConnectionForm({ onSuccess, connection }: Props) {
         )}
 
         <DialogFooter className="mt-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onSuccess}
-            disabled={loadingConnection}
-          >
-            Fechar
-          </Button>
+          <DialogClose asChild>
+            <Button variant="outline" disabled={loadingConnection}>
+              Fechar
+            </Button>
+          </DialogClose>
           <Button type="submit" disabled={loadingConnection}>
             {loadingConnection && (
               <Loader2Icon className="animate-spin mr-2 size-4" />

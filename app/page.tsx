@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useTheme } from "next-themes";
-import { Play, FileCode, Loader2Icon } from "lucide-react";
+import { Play, FileCode, Loader2Icon, Save, FileSearch } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { useActiveConnection } from "@/hooks/useActiveConnection";
 import { useExecuteQuery } from "@/hooks/useExecuteQuery";
@@ -10,13 +10,7 @@ import { DataTable } from "@/components/data-table";
 import { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
 import { sqlKeywords } from "@/lib/sql-keywords";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+import { Breadcrumb, BreadcrumbList } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
@@ -234,25 +228,34 @@ export default function Page() {
                     <FileCode />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Abrir</TooltipContent>
+                <TooltipContent>Abrir arquivo</TooltipContent>
               </Tooltip>
-              {!!connection?.connection_name && (
-                <>
-                  {/* <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink href="#">All Inboxes</BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className="hidden md:block" /> */}
-                  <BreadcrumbItem>
-                    <BreadcrumbPage>Conectado em</BreadcrumbPage>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className="hidden md:block" />
-                  <BreadcrumbItem>
-                    <BreadcrumbPage className="font-bold">
-                      {connection?.connection_name}
-                    </BreadcrumbPage>
-                  </BreadcrumbItem>
-                </>
-              )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="size-8"
+                    disabled={!connection?.connection_name}
+                  >
+                    <FileSearch />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Minhas Queries</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="size-8"
+                    disabled={!connection?.connection_name}
+                  >
+                    <Save />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Salvar query</TooltipContent>
+              </Tooltip>
             </BreadcrumbList>
           </Breadcrumb>
         </header>

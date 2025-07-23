@@ -26,7 +26,8 @@ import {
   Unplug,
   Plug,
   Edit,
-  Trash,
+  Trash2,
+  PackagePlus,
 } from "lucide-react";
 import { NavUser } from "@/components/nav-user";
 import { Label } from "@/components/ui/label";
@@ -200,6 +201,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
+              {connection?.id && (
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      variant="outline"
+                      tooltip={{
+                        children: "Adicionar conexão",
+                        hidden: false,
+                      }}
+                      onClick={() => setIsModalOpen(true)}
+                      className="px-2.5 md:px-2 cursor-pointer"
+                    >
+                      <PackagePlus />
+                      <span>Adicionar conexão</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              )}
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
@@ -513,7 +532,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 onClick={() => handleModal(conn, "delete")}
                                 disabled={loadingOpenConnection}
                               >
-                                <Trash />
+                                <Trash2 />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>Excluir</TooltipContent>
