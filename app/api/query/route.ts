@@ -7,6 +7,7 @@ export async function POST(req: NextRequest) {
 
   try {
     let client = "mysql2";
+    let decryptedPassword: string | undefined;
 
     switch (connection.connection_type) {
       case "mysql":
@@ -28,6 +29,13 @@ export async function POST(req: NextRequest) {
         );
     }
 
+    if (
+      connection.connection_type !== "sqlite" &&
+      typeof connection.password === "string"
+    ) {
+      decryptedPassword = decrypt(connection.password);
+    }
+
     const connectionConfig =
       client === "mssql"
         ? {
@@ -45,13 +53,17 @@ export async function POST(req: NextRequest) {
             host: connection.host,
             port: Number(connection.port),
             user: connection.username,
-            password: decrypt(connection.password),
+            password: decryptedPassword,
             database: connection.database_name,
           };
 
     const db = knex({
       client,
-      connection: connectionConfig,
+      connection:
+        client === "sqlite3"
+          ? { filename: connection.file_path }
+          : connectionConfig,
+      useNullAsDefault: client === "sqlite3",
     });
 
     const result = await db.raw(query);

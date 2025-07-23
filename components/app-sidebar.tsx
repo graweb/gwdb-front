@@ -117,8 +117,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     } catch (error) {
       toast.error(
         error instanceof Error
-          ? `Erro de conexão, verifique se o banco de dados etá iniciado`
-          : "Erro desconhecido"
+          ? `Erro de conexão, verifique se o banco de dados está iniciado`
+          : `Erro desconhecido`
       );
     }
   };
@@ -126,6 +126,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   async function testConnection(conn: Connection) {
     try {
       setLoadingOpenConnection(true);
+
       const res = await fetch("/api/objects", {
         method: "POST",
         body: JSON.stringify({ connection: conn }),

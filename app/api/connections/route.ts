@@ -10,7 +10,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const data = await req.json();
-  const encryptedPassword = encrypt(data.password);
+  const hasPassword = !!data.password && data.password.length > 0;
 
   const stmt = db.prepare(`
     INSERT INTO connections (
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     data.port,
     data.database_name,
     data.username,
-    encryptedPassword,
+    hasPassword ? encrypt(data.password) : null,
     data.file_path || null
   );
 
@@ -37,6 +37,9 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   const data = await req.json();
+  const hasPassword = !!data.password && data.password.length > 0;
+
+  console.log(hasPassword);
 
   const stmt = db.prepare(`
     UPDATE connections SET
@@ -58,7 +61,11 @@ export async function PUT(req: Request) {
     data.port,
     data.database_name,
     data.username,
-    isEncrypted(data.password) ? data.password : encrypt(data.password),
+    hasPassword
+      ? isEncrypted(data.password)
+        ? data.password
+        : encrypt(data.password)
+      : null,
     data.file_path || null,
     data.id
   );
