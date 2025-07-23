@@ -50,7 +50,15 @@ export async function POST(req: NextRequest) {
             database: connection.database_name,
           };
 
-    const db = knex({ client, connection: connectionConfig });
+    const db = knex({
+      client,
+      connection:
+        client === "sqlite3"
+          ? { filename: connection.file_path }
+          : connectionConfig,
+      useNullAsDefault: client === "sqlite3",
+    });
+
     const dbName = connection.database_name;
     let result = {};
 
@@ -203,9 +211,16 @@ export async function POST(req: NextRequest) {
 
       const enrichedTables = await Promise.all(
         tables.map(async (t) => {
-          const pragma = await db.raw(`PRAGMA table_info(${t.name})`);
+          const pragmaRes = await db.raw(`PRAGMA table_info(${t.name})`);
+          const pragma =
+            Array.isArray(pragmaRes) && Array.isArray(pragmaRes[0])
+              ? pragmaRes[0]
+              : Array.isArray(pragmaRes)
+              ? pragmaRes
+              : [];
+
           const columns = pragma.map((col: any) => {
-            const typeMatch = col.type.match(/(\w+)(?:\((\d+)(?:,(\d+))?\))?/);
+            const typeMatch = col.type?.match(/(\w+)(?:\((\d+)(?:,(\d+))?\))?/);
             return {
               name: col.name,
               type: typeMatch?.[1] || col.type,
