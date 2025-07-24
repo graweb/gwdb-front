@@ -1,0 +1,65 @@
+{
+  "default_editor_text": "-- ingrese su consulta",
+  "messages": {
+    "no_results": "No se encontraron resultados",
+    "no_connections": "No se encontraron conexiones",
+    "connection_not_selected": "Seleccione una conexión antes de ejecutar la consulta.",
+    "error_to_connect": "Error de conexión",
+    "unknown_error": "Error desconocido",
+    "database_connected": "Conectado a la base de datos",
+    "connection_error": "Error de conexión. Comprobar si la base de datos está iniciada.",
+    "connection_created": "Conexión creada correctamente.",
+    "connection_updated": "Conexión actualizada correctamente.",
+    "connection_error_save": "Error al guardar la conexión, inténtelo de nuevo."
+  },
+  "objects": {
+    "tables": "Tablas",
+    "views": "Vistas",
+    "procedures": "Procedimientos",
+    "triggers": "Disparadores",
+    "events": "Eventos",
+    "indices": "Índices",
+    "column_of": "Columna de",
+    "key_word": "Palabra clave SQL",
+    "table": "Tabla"
+  },
+  "tooltips": {
+    "new_connection": "Nueva conexión",
+    "simultaneous_connection": "Conexión simultánea",
+    "connect": "Conectar",
+    "disconnect": "Desconectar",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "theme_dark": "Oscuro",
+    "theme_light": "Claro",
+    "execute_query": "Ejecutar",
+    "open_file": "Abrir archivo",
+    "my_queries": "Mis consultas",
+    "save_query": "Guardar consulta"
+  },
+  "dialog": {
+    "new_connection": {
+      "title": {
+        "new": "Nueva conexión",
+        "edit": "Editar conexión"
+      }
+    },
+    "remove": {
+      "title": "Atención",
+      "message": {
+        "part_1": "¿Desea eliminar la conexión?",
+        "part_2": "con la base de datos"
+      }
+    }
+  },
+  "buttons": {
+    "yes": "Sí",
+    "no": "No",
+    "plan_upgrade": "Actualizar a Pro"
+  },
+  "datatable": {
+    "filter": "Filtro...",
+    "page": "Página",
+    "of": "de"
+  }
+}

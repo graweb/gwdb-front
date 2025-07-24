@@ -1,0 +1,65 @@
+{
+  "default_editor_text": "-- digite sua query",
+  "messages": {
+    "no_results": "Nenhum resultado encontrado",
+    "no_connections": "Nenhuma conexão encontrada",
+    "connection_not_selected": "Por favor, selecione uma conexão antes de executar a query.",
+    "error_to_connect": "Erro ao conectar",
+    "unknown_error": "Erro deconhecido",
+    "database_connected": "Conectado ao banco",
+    "connection_error": "Erro de conexão, verifique se o banco de dados está iniciado.",
+    "connection_created": "Conexão criada com sucesso.",
+    "connection_updated": "Conexão atualizada com sucesso.",
+    "connection_error_save": "Erro ao salvar a conexão, tente novamente."
+  },
+  "objects": {
+    "tables": "Tabelas",
+    "views": "Visualizações",
+    "procedures": "Procedimentos",
+    "triggers": "Triggers",
+    "events": "Eventos",
+    "indices": "Índices",
+    "column_of": "Coluna de",
+    "key_word": "Palavra-chave SQL",
+    "table": "Tabela"
+  },
+  "tooltips": {
+    "new_connection": "Nova conexão",
+    "simultaneous_connection": "Conexão simultânea",
+    "connect": "Conectar",
+    "disconnect": "Desconectar",
+    "edit": "Editar",
+    "delete": "Deletar",
+    "theme_dark": "Escuro",
+    "theme_light": "Claro",
+    "execute_query": "Executar",
+    "open_file": "Abrir arquivo",
+    "my_queries": "Minhas queries",
+    "save_query": "Salvar query"
+  },
+  "dialog": {
+    "new_connection": {
+      "title": {
+        "new": "Nova conexão",
+        "edit": "Editar conexão"
+      }
+    },
+    "remove": {
+      "title": "Atenção",
+      "message": {
+        "part_1": "Deseja remover a conexão",
+        "part_2": "com o banco de dados "
+      }
+    }
+  },
+  "buttons": {
+    "yes": "Sim",
+    "no": "Não",
+    "plan_upgrade": "Atualizar plano"
+  },
+  "datatable": {
+    "filter": "Filtrar...",
+    "page": "Página",
+    "of": "de"
+  }
+}

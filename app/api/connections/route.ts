@@ -30,16 +30,12 @@ export async function POST(req: Request) {
     data.file_path || null
   );
 
-  console.log(result);
-
   return NextResponse.json(result.changes > 0);
 }
 
 export async function PUT(req: Request) {
   const data = await req.json();
   const hasPassword = !!data.password && data.password.length > 0;
-
-  console.log(hasPassword);
 
   const stmt = db.prepare(`
     UPDATE connections SET

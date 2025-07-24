@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import {
   connectionFormSchema,
@@ -38,9 +39,9 @@ type Props = {
 };
 
 export function ConnectionForm({ onSuccess, connection }: Props) {
+  const t = useTranslations();
   const { createConnection, updateConnection, loadingConnection } =
     useConnections();
-
   const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<ConnectionFormValues>({
@@ -102,15 +103,15 @@ export function ConnectionForm({ onSuccess, connection }: Props) {
     try {
       if (connection?.id) {
         await updateConnection(values, connection.id);
-        toast.success("Conexão atualizada com sucesso");
+        toast.success(t("messages.connection_updated"));
       } else {
         await createConnection(values);
-        toast.success("Conexão criada com sucesso");
+        toast.success(t("messages.connection_created"));
       }
 
       onSuccess();
     } catch (error) {
-      toast.error("Erro ao salvar conexão " + error);
+      toast.error(t("messages.connection_error_save") + error);
     }
   };
 

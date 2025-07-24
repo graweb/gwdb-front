@@ -1,0 +1,65 @@
+{
+  "default_editor_text": "-- enter your query",
+  "messages": {
+    "no_results": "No results found",
+    "no_connections": "No connections found",
+    "connection_not_selected": "Please select a connection before executing the query.",
+    "error_to_connect": "Error to connect",
+    "unknown_error": "Unknown error",
+    "database_connected": "Connected to database",
+    "connection_error": "Connection error, check if the database is started.",
+    "connection_created": "Connection created successfully.",
+    "connection_updated": "Connection updated successfully.",
+    "connection_error_save": "Error saving connection, please try again."
+  },
+  "objects": {
+    "tables": "Tables",
+    "views": "Views",
+    "procedures": "Procedures",
+    "triggers": "Triggers",
+    "events": "Events",
+    "indices": "Índices",
+    "column_of": "Column of",
+    "key_word": "SQL Keyword",
+    "table": "Table"
+  },
+  "tooltips": {
+    "new_connection": "New connection",
+    "simultaneous_connection": "Simultaneous connection",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "edit": "Edit",
+    "delete": "Delete",
+    "theme_dark": "Dark",
+    "theme_light": "Light",
+    "execute_query": "Execute",
+    "open_file": "Open file",
+    "my_queries": "My queries",
+    "save_query": "Save query"
+  },
+  "dialog": {
+    "new_connection": {
+      "title": {
+        "new": "New connection",
+        "edit": "Edit connection"
+      }
+    },
+    "remove": {
+      "title": "Attention",
+      "message": {
+        "part_1": "Do you want to remove the connection",
+        "part_2": "with the database"
+      }
+    }
+  },
+  "buttons": {
+    "yes": "Yes",
+    "no": "No",
+    "plan_upgrade": "Upgrade to Pro"
+  },
+  "datatable": {
+    "filter": "Filter...",
+    "page": "Page",
+    "of": "of"
+  }
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState, useRef } from "react";
 import { useTheme } from "next-themes";
 import { Play, FileCode, Loader2Icon, Save, FileSearch } from "lucide-react";
@@ -28,6 +29,7 @@ import {
 import { Button } from "@/components/ui/button";
 
 export default function Page() {
+  const t = useTranslations();
   const { resolvedTheme } = useTheme();
   const [monacoTheme, setMonacoTheme] = useState("vs");
   const [query, setQuery] = useState("");
@@ -98,7 +100,7 @@ export default function Page() {
             label: table.TABLE_NAME,
             kind: monaco.languages.CompletionItemKind.Struct,
             insertText: table.TABLE_NAME,
-            detail: "Tabela",
+            detail: t("objects.table"),
             range,
           });
 
@@ -110,7 +112,7 @@ export default function Page() {
                 label: key,
                 kind: monaco.languages.CompletionItemKind.Field,
                 insertText: key,
-                detail: `Coluna de ${table.TABLE_NAME}`,
+                detail: `${t("objects.column_of")} ${table.TABLE_NAME}`,
                 range,
               });
             }
@@ -122,7 +124,7 @@ export default function Page() {
             label: kw,
             kind: monaco.languages.CompletionItemKind.Keyword,
             insertText: kw,
-            detail: "Palavra-chave SQL",
+            detail: t("objects.key_word"),
             range,
           });
         });
@@ -132,17 +134,17 @@ export default function Page() {
     });
 
     return () => provider.dispose();
-  }, [objects]);
+  }, [objects, t]);
 
   useEffect(() => {
     if (connection === null) {
       setQuery("");
       resetQueryResult();
       if (editorRef.current) {
-        editorRef.current.setValue("-- digite sua query");
+        editorRef.current.setValue(t("default_editor_text"));
       }
     }
-  }, [connection, resetQueryResult]);
+  }, [connection, resetQueryResult, t]);
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
@@ -160,9 +162,7 @@ export default function Page() {
     const activeConnection = connectionRef.current;
 
     if (!activeConnection?.connection_name) {
-      toast.warning(
-        "Por favor, selecione uma conexão antes de executar a query."
-      );
+      toast.warning(t("messages.connection_not_selected"));
       return;
     }
 
@@ -215,7 +215,7 @@ export default function Page() {
                     <Play />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Executar</TooltipContent>
+                <TooltipContent>{t("tooltips.connect")}</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -228,7 +228,7 @@ export default function Page() {
                     <FileCode />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Abrir arquivo</TooltipContent>
+                <TooltipContent>{t("tooltips.open_file")}</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -241,7 +241,7 @@ export default function Page() {
                     <FileSearch />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Minhas Queries</TooltipContent>
+                <TooltipContent>{t("tooltips.my_queries")}</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -254,7 +254,7 @@ export default function Page() {
                     <Save />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Salvar query</TooltipContent>
+                <TooltipContent>{t("tooltips.save_query")}</TooltipContent>
               </Tooltip>
             </BreadcrumbList>
           </Breadcrumb>
@@ -265,7 +265,7 @@ export default function Page() {
             <Editor
               height="100%"
               defaultLanguage="sql"
-              defaultValue="-- digite sua query"
+              defaultValue={t("default_editor_text")}
               theme={monacoTheme}
               onMount={handleEditorDidMount}
               onChange={(val) => setQuery(val || "")}
@@ -284,7 +284,7 @@ export default function Page() {
               </div>
             ) : (
               <p className="text-sm text-muted-foreground p-2">
-                Nenhum resultado encontrado.
+                {t("messages.no_results")}
               </p>
             )}
           </div>

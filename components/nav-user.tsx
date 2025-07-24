@@ -1,23 +1,17 @@
 "use client";
 
-import {
-  BadgeCheck,
-  Bell,
-  ChevronsUpDown,
-  CreditCard,
-  LogOut,
-  Sparkles,
-} from "lucide-react";
-
+import { useTranslations } from "next-intl";
+import { ChevronsUpDown, Sparkles } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
 import {
   SidebarMenu,
@@ -35,7 +29,24 @@ export function NavUser({
     avatar: string;
   };
 }) {
+  const t = useTranslations();
   const { isMobile } = useSidebar();
+  const router = useRouter();
+  const pathname = usePathname();
+  const currentLang = pathname.split("/").pop();
+
+  const languages = [
+    { code: "pt-br", label: "🇧🇷 Português" },
+    { code: "en", label: "🇺🇸 English" },
+    { code: "es", label: "🇪🇸 Español" },
+  ];
+
+  const changeLanguage = (lang: string) => {
+    const lastSlashIndex = pathname.lastIndexOf("/");
+    const basePath = pathname.substring(0, lastSlashIndex);
+    const newPath = `${basePath}/${lang}`;
+    router.push(newPath);
+  };
 
   return (
     <SidebarMenu>
@@ -44,7 +55,7 @@ export function NavUser({
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground md:h-8 md:p-0"
+              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground md:h-8 md:p-0 cursor-pointer"
             >
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage src={user.avatar} alt={user.name} />
@@ -63,7 +74,7 @@ export function NavUser({
             align="end"
             sideOffset={4}
           >
-            <DropdownMenuLabel className="p-0 font-normal">
+            {/* <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage src={user.avatar} alt={user.name} />
@@ -75,33 +86,31 @@ export function NavUser({
                 </div>
               </div>
             </DropdownMenuLabel>
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator /> */}
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer">
                 <Sparkles />
-                Upgrade to Pro
+                {t("buttons.plan_upgrade")}
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <BadgeCheck />
-                Account
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <CreditCard />
-                Billing
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Bell />
-                Notifications
-              </DropdownMenuItem>
+              {languages.map((lang) => (
+                <DropdownMenuCheckboxItem
+                  key={lang.code}
+                  checked={currentLang === lang.code}
+                  onCheckedChange={() => changeLanguage(lang.code)}
+                  className="cursor-pointer"
+                >
+                  {lang.label}
+                </DropdownMenuCheckboxItem>
+              ))}
             </DropdownMenuGroup>
-            <DropdownMenuSeparator />
+            {/* <DropdownMenuSeparator />
             <DropdownMenuItem>
               <LogOut />
               Log out
-            </DropdownMenuItem>
+            </DropdownMenuItem> */}
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

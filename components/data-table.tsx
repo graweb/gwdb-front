@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import {
   ColumnDef,
@@ -33,8 +34,8 @@ interface DataTableProps<TData> {
 }
 
 export function DataTable<TData>({ columns, data }: DataTableProps<TData>) {
+  const t = useTranslations();
   const [sorting, setSorting] = useState<SortingState>([]);
-
   const table = useReactTable({
     data,
     columns,
@@ -70,10 +71,10 @@ export function DataTable<TData>({ columns, data }: DataTableProps<TData>) {
             <ChevronRight />
           </Button>
         </div>
-        <Input placeholder="Filtrar..." className="flex-1" />
+        <Input placeholder={t("datatable.filter")} className="flex-1" />
         <div className="text-sm text-muted-foreground">
-          Página {table.getState().pagination.pageIndex + 1} de{" "}
-          {table.getPageCount()}
+          {t("datatable.page")} {table.getState().pagination.pageIndex + 1}{" "}
+          {t("datatable.of")} {table.getPageCount()}
         </div>
       </div>
 

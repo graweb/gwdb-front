@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
+import { useTranslations } from "next-intl";
 import React, { useState } from "react";
 import { useTheme } from "next-themes";
 import { useActiveConnection } from "@/hooks/useActiveConnection";
@@ -74,6 +75,7 @@ const data = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const t = useTranslations();
   const {
     connections,
     loadingConnection,
@@ -114,12 +116,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     try {
       await testConnection(conn);
       setConnection(conn);
-      toast.success(`Conectado ao banco ${conn.database_name}`);
+      toast.success(
+        `${t("messages.database_connected")} ${conn.database_name}`
+      );
     } catch (error) {
       toast.error(
         error instanceof Error
-          ? `Erro de conexão, verifique se o banco de dados está iniciado`
-          : `Erro desconhecido`
+          ? t("messages.connection_error")
+          : t("messages.unknown_error")
       );
     }
   };
@@ -139,7 +143,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       const json = await res.json();
 
       if (!json.success) {
-        throw new Error(json.error || "Erro ao conectar");
+        throw new Error(json.error || t("messages.error_to_connect"));
       }
 
       setLoadingOpenConnection(false);
@@ -148,7 +152,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     } catch (error) {
       setLoadingOpenConnection(false);
       throw new Error(
-        error instanceof Error ? error.message : "Erro desconhecido"
+        error instanceof Error ? error.message : t("messages.unknown_error")
       );
     }
   }
@@ -190,14 +194,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <SidebarMenuButton
                     variant="outline"
                     tooltip={{
-                      children: "Nova conexão",
+                      children: t("tooltips.new_connection"),
                       hidden: false,
                     }}
                     onClick={() => setIsModalOpen(true)}
                     className="px-2.5 md:px-2 cursor-pointer"
                   >
                     <PlusCircle />
-                    <span>Nova conexão</span>
+                    <span>{t("tooltips.new_connection")}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
@@ -207,14 +211,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <SidebarMenuButton
                       variant="outline"
                       tooltip={{
-                        children: "Adicionar conexão",
+                        children: t("tooltips.simultaneous_connection"),
                         hidden: false,
                       }}
                       onClick={() => setIsModalOpen(true)}
                       className="px-2.5 md:px-2 cursor-pointer"
                     >
                       <PackagePlus />
-                      <span>Adicionar conexão</span>
+                      <span>{t("tooltips.simultaneous_connection")}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </SidebarMenu>
@@ -222,9 +226,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        {/* <SidebarFooter>
-          <NavUser user={data.user} />
-        </SidebarFooter> */}
+        {
+          <SidebarFooter>
+            <NavUser user={data.user} />
+          </SidebarFooter>
+        }
       </Sidebar>
 
       {/* This is the second sidebar */}
@@ -248,7 +254,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {theme === "dark" ? "Light" : "Dark"}
+                  {theme === "dark"
+                    ? t("tooltips.theme_light")
+                    : t("tooltips.theme_dark")}
                 </TooltipContent>
               </Tooltip>
             </Label>
@@ -302,14 +310,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                               <Unplug />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>Desconectar</TooltipContent>
+                          <TooltipContent>
+                            {t("tooltips.disconnect")}
+                          </TooltipContent>
                         </Tooltip>
                       </SidebarGroupLabel>
 
                       {/* Tables */}
                       <DatabaseObjectSideBar
                         icon={<Table2 className="size-5" />}
-                        title="Tabelas"
+                        title={t("objects.tables")}
                         items={objects.tables ?? []}
                         renderItem={(t) => (
                           <>
@@ -369,7 +379,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       {/* Views */}
                       <DatabaseObjectSideBar
                         icon={<ScanEye className="size-5" />}
-                        title="Views"
+                        title={t("objects.views")}
                         items={objects.views ?? []}
                         renderItem={(t) => (
                           <SidebarMenuButton>
@@ -384,7 +394,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       {/* Procedures */}
                       <DatabaseObjectSideBar
                         icon={<Workflow className="size-5" />}
-                        title="Procedures"
+                        title={t("objects.procedures")}
                         items={objects.procedures ?? []}
                         renderItem={(t) => (
                           <SidebarMenuButton>
@@ -399,7 +409,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       {/* Triggers */}
                       <DatabaseObjectSideBar
                         icon={<Waypoints className="size-5" />}
-                        title="Triggers"
+                        title={t("objects.triggers")}
                         items={objects.triggers ?? []}
                         renderItem={(t) => (
                           <SidebarMenuButton>
@@ -414,7 +424,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       {/* Eventos */}
                       <DatabaseObjectSideBar
                         icon={<FileScan className="size-5" />}
-                        title="Eventos"
+                        title={t("objects.events")}
                         items={objects.events ?? []}
                         renderItem={(t) => (
                           <SidebarMenuButton>
@@ -429,7 +439,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       {/* Índices */}
                       <DatabaseObjectSideBar
                         icon={<FolderKey className="size-5" />}
-                        title="Índices"
+                        title={t("objects.indices")}
                         items={objects.indexes ?? []}
                         renderItem={(t) => (
                           <SidebarMenuButton>
@@ -458,7 +468,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     connections.length === 0 && (
                       <div className="flex justify-center py-4">
                         <span className="text-sm text-muted-foreground">
-                          Nenhuma conexão encontrada
+                          {t("messages.no_connections")}
                         </span>
                       </div>
                     )}
@@ -505,7 +515,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 )}
                               </Button>
                             </TooltipTrigger>
-                            <TooltipContent>Conectar</TooltipContent>
+                            <TooltipContent>
+                              {t("tooltips.connect")}
+                            </TooltipContent>
                           </Tooltip>
 
                           <Tooltip>
@@ -520,7 +532,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 <Edit />
                               </Button>
                             </TooltipTrigger>
-                            <TooltipContent>Editar</TooltipContent>
+                            <TooltipContent>
+                              {t("tooltips.edit")}
+                            </TooltipContent>
                           </Tooltip>
 
                           <Tooltip>
@@ -535,7 +549,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 <Trash2 />
                               </Button>
                             </TooltipTrigger>
-                            <TooltipContent>Excluir</TooltipContent>
+                            <TooltipContent>
+                              {t("tooltips.delete")}
+                            </TooltipContent>
                           </Tooltip>
                         </div>
                       </div>
@@ -561,7 +577,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         >
           <DialogHeader>
             <DialogTitle>
-              {selectedConnection ? "Editar conexão" : "Nova conexão"}
+              {selectedConnection
+                ? t("dialog.new_connection.title.edit")
+                : t("dialog.new_connection.title.new")}
             </DialogTitle>
           </DialogHeader>
           <ConnectionForm
@@ -582,23 +600,25 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
           <DialogHeader>
-            <DialogTitle>Atenção</DialogTitle>
+            <DialogTitle>{t("dialog.remove.title")}</DialogTitle>
           </DialogHeader>
           <Label>
-            Deseja remover a conexão {selectedConnection?.connection_name} com o
-            banco de dados {selectedConnection?.database_name}?
+            {t("dialog.remove.message.part_1")}{" "}
+            {selectedConnection?.connection_name}{" "}
+            {t("dialog.remove.message.part_2")}{" "}
+            {selectedConnection?.database_name}?
           </Label>
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="secondary">
-                Não
+                {t("buttons.no")}
               </Button>
             </DialogClose>
             <Button
               onClick={submitRemoveConnection}
               className="bg-red-800 text-white hover:bg-red-700 hover:text-white"
             >
-              Sim
+              {t("buttons.yes")}
             </Button>
           </DialogFooter>
         </DialogContent>
