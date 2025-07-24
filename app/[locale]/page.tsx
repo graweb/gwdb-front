@@ -11,7 +11,7 @@ import { usePaginatedQuery } from "@/hooks/useExecuteQuery";
 import { DataTable } from "@/components/data-table";
 import { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
-import { sqlKeywords } from "@/lib/sql-keywords";
+import { sqlKeywordsByDialect } from "@/lib/sql-keywords";
 import { Breadcrumb, BreadcrumbList } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -41,6 +41,8 @@ export default function Page() {
   );
   const monacoRef = useRef<typeof monacoType | null>(null);
   const connectionRef = useRef(connection);
+  const dialect = connection?.connection_type ?? "mysql";
+  const sqlKeywords = sqlKeywordsByDialect[dialect] ?? [];
 
   const {
     executeQuery,
@@ -95,49 +97,90 @@ export default function Page() {
           endColumn: word.endColumn,
         };
 
-        const suggestions: monacoType.languages.CompletionItem[] = [];
-        const columnSet = new Set<string>();
+        const value = model.getValue().toUpperCase();
+        const linesUntilCursor = model.getValueInRange({
+          startLineNumber: 1,
+          startColumn: 1,
+          endLineNumber: position.lineNumber,
+          endColumn: position.column,
+        });
 
-        objects?.tables?.forEach((table) => {
-          suggestions.push({
-            label: table.TABLE_NAME,
-            kind: monaco.languages.CompletionItemKind.Struct,
-            insertText: table.TABLE_NAME,
-            detail: t("objects.table"),
-            range,
+        const suggestions: monacoType.languages.CompletionItem[] = [];
+
+        // Verifica se estamos logo após FROM
+        const isAfterFrom = /\bFROM\s+[\w]*$/i.test(linesUntilCursor);
+        const isAfterWhere = /\bWHERE\s+[\w]*$/i.test(linesUntilCursor);
+        const isAfterJoin = /\bJOIN\s+[\w]*$/i.test(linesUntilCursor);
+
+        // Extrai a(s) tabela(s) mencionada(s) no FROM
+        const fromMatch = value.match(/\bFROM\s+([a-zA-Z0-9_]+)/);
+        const tableInFrom = fromMatch?.[1];
+
+        if (isAfterFrom || isAfterJoin) {
+          // Apenas sugestões de tabelas
+          objects?.tables?.forEach((table) => {
+            suggestions.push({
+              label: table.TABLE_NAME,
+              kind: monaco.languages.CompletionItemKind.Struct,
+              insertText: table.TABLE_NAME,
+              detail: t("objects.table"),
+              range,
+            });
+          });
+        } else if (isAfterWhere && tableInFrom) {
+          const targetTable = objects?.tables?.find(
+            (t) => t.TABLE_NAME.toUpperCase() === tableInFrom.toUpperCase()
+          );
+
+          targetTable?.COLUMNS?.forEach((column) => {
+            suggestions.push({
+              label: column.name,
+              kind: monaco.languages.CompletionItemKind.Field,
+              insertText: column.name,
+              detail: `${t("objects.column_of")} ${tableInFrom}`,
+              range,
+            });
+          });
+        } else {
+          // Palavras-chave e funções (default)
+          sqlKeywords.forEach((kw) => {
+            suggestions.push({
+              label: kw,
+              kind: monaco.languages.CompletionItemKind.Keyword,
+              insertText: kw,
+              detail: t("objects.key_word"),
+              range,
+            });
           });
 
-          table.COLUMNS?.forEach((column) => {
-            const key = `${table.TABLE_NAME}.${column}`;
-            if (!columnSet.has(key)) {
-              columnSet.add(key);
+          // E também tabelas e colunas com `table.column` opcionalmente
+          objects?.tables?.forEach((table) => {
+            suggestions.push({
+              label: table.TABLE_NAME,
+              kind: monaco.languages.CompletionItemKind.Struct,
+              insertText: table.TABLE_NAME,
+              detail: t("objects.table"),
+              range,
+            });
+
+            table.COLUMNS?.forEach((column) => {
               suggestions.push({
-                label: key,
+                label: `${table.TABLE_NAME}.${column.name}`,
                 kind: monaco.languages.CompletionItemKind.Field,
-                insertText: key,
+                insertText: `${table.TABLE_NAME}.${column.name}`,
                 detail: `${t("objects.column_of")} ${table.TABLE_NAME}`,
                 range,
               });
-            }
+            });
           });
-        });
-
-        sqlKeywords.forEach((kw) => {
-          suggestions.push({
-            label: kw,
-            kind: monaco.languages.CompletionItemKind.Keyword,
-            insertText: kw,
-            detail: t("objects.key_word"),
-            range,
-          });
-        });
+        }
 
         return { suggestions };
       },
     });
 
     return () => provider.dispose();
-  }, [objects, t]);
+  });
 
   useEffect(() => {
     if (connection === null) {
