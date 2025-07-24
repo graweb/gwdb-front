@@ -35,13 +35,6 @@ export const connectionFormSchema = z
           message: "Porta é obrigatória",
         });
       }
-      if (!data.database_name || data.database_name.trim() === "") {
-        ctx.addIssue({
-          path: ["database_name"],
-          code: "custom",
-          message: "Nome do banco é obrigatório",
-        });
-      }
       if (!data.username || data.username.trim() === "") {
         ctx.addIssue({
           path: ["username"],

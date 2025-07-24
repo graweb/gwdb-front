@@ -60,6 +60,7 @@
   "datatable": {
     "filter": "Filter...",
     "page": "Page",
-    "of": "of"
+    "of": "of",
+    "total": " - total"
   }
 }

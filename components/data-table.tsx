@@ -1,7 +1,6 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -27,22 +26,41 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useState } from "react";
 
 interface DataTableProps<TData> {
   columns: ColumnDef<TData>[];
   data: TData[];
+  total: number;
+  pageIndex: number;
+  pageSize: number;
+  setPageIndex: (index: number) => void;
+  setPageSize: (size: number) => void;
 }
 
-export function DataTable<TData>({ columns, data }: DataTableProps<TData>) {
+export function DataTable<TData>({
+  columns,
+  data,
+  total,
+  pageIndex,
+  pageSize,
+  setPageIndex,
+}: DataTableProps<TData>) {
   const t = useTranslations();
   const [sorting, setSorting] = useState<SortingState>([]);
+
+  const pageCount = Math.ceil(total / pageSize);
+
   const table = useReactTable({
     data,
     columns,
     state: {
       sorting,
+      pagination: { pageIndex, pageSize },
     },
     onSortingChange: setSorting,
+    pageCount,
+    manualPagination: true,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -55,26 +73,27 @@ export function DataTable<TData>({ columns, data }: DataTableProps<TData>) {
           <Button
             variant="outline"
             size="icon"
-            className="size-8"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
+            className="size-8 cursor-pointer"
+            onClick={() => setPageIndex(pageIndex - 1)}
+            disabled={pageIndex === 0}
           >
             <ChevronLeft />
           </Button>
+
           <Button
             variant="outline"
             size="icon"
-            className="size-8"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
+            className="size-8 cursor-pointer"
+            onClick={() => setPageIndex(pageIndex + 1)}
+            disabled={pageIndex + 1 >= pageCount}
           >
             <ChevronRight />
           </Button>
         </div>
         <Input placeholder={t("datatable.filter")} className="flex-1" />
         <div className="text-sm text-muted-foreground">
-          {t("datatable.page")} {table.getState().pagination.pageIndex + 1}{" "}
-          {t("datatable.of")} {table.getPageCount()}
+          {t("datatable.page")} {pageIndex + 1} {t("datatable.of")} {pageCount}
+          {t("datatable.total")} {total}
         </div>
       </div>
 

@@ -60,6 +60,7 @@
   "datatable": {
     "filter": "Filtrar...",
     "page": "Página",
-    "of": "de"
+    "of": "de",
+    "total": " - total"
   }
 }

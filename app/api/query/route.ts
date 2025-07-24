@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import knex from "knex";
 import { decrypt } from "@/lib/crypto";
 
 export async function POST(req: NextRequest) {
-  const { query, connection } = await req.json();
+  const { query, connection, page = 0, pageSize = 50 } = await req.json();
 
   try {
     let client = "mysql2";
@@ -66,10 +67,44 @@ export async function POST(req: NextRequest) {
       useNullAsDefault: client === "sqlite3",
     });
 
-    const result = await db.raw(query);
+    const isSelect =
+      typeof query === "string" &&
+      query.trim().toLowerCase().startsWith("select");
+
+    let paginatedResult: any[] = [];
+    let total = 0;
+
+    if (isSelect) {
+      const cleanQuery = query.trim().replace(/;$/, "");
+      const offset = (page - 1) * pageSize;
+      const countQuery = `SELECT COUNT(*) as total FROM (${cleanQuery}) as total_count`;
+      let dataQuery = "";
+
+      if (client === "mssql") {
+        dataQuery = `${cleanQuery} ORDER BY id OFFSET ${offset} ROWS FETCH NEXT ${pageSize} ROWS ONLY`;
+      } else {
+        dataQuery = `${cleanQuery} LIMIT ${pageSize} OFFSET ${offset}`;
+      }
+
+      const [countResult] = await db.raw(countQuery);
+      const dataResult = await db.raw(dataQuery);
+
+      total = countResult?.total || countResult?.[0]?.total || 0;
+      paginatedResult = dataResult;
+    } else {
+      const dataResult = await db.raw(query);
+      paginatedResult = dataResult;
+    }
+
     await db.destroy();
 
-    return NextResponse.json({ success: true, result });
+    return NextResponse.json({
+      success: true,
+      result: paginatedResult,
+      total,
+      page,
+      pageSize,
+    });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Erro desconhecido.";

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useTranslations } from "next-intl";
@@ -6,7 +7,7 @@ import { useTheme } from "next-themes";
 import { Play, FileCode, Loader2Icon, Save, FileSearch } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { useActiveConnection } from "@/hooks/useActiveConnection";
-import { useExecuteQuery } from "@/hooks/useExecuteQuery";
+import { usePaginatedQuery } from "@/hooks/useExecuteQuery";
 import { DataTable } from "@/components/data-table";
 import { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
@@ -47,10 +48,14 @@ export default function Page() {
     loadingQuery,
     resultQuery,
     columnsQuery,
-  } = useExecuteQuery();
+    pageIndex,
+    setPageIndex,
+    pageSize,
+    setPageSize,
+    totalQueryRows,
+  } = usePaginatedQuery();
 
   const [columnDefs, setColumnDefs] = useState<
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ColumnDef<Record<string, any>>[]
   >([]);
 
@@ -60,7 +65,6 @@ export default function Page() {
 
   useEffect(() => {
     if (columnsQuery.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const dynamicColumns: ColumnDef<Record<string, any>>[] = columnsQuery.map(
         (col: string) => ({
           accessorKey: col,
@@ -68,7 +72,6 @@ export default function Page() {
           cell: ({ row }) => row.original[col]?.toString() ?? "",
         })
       );
-
       setColumnDefs(dynamicColumns);
     }
   }, [columnsQuery]);
@@ -152,13 +155,26 @@ export default function Page() {
 
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
       if (!editorRef.current) return;
-      const sqlBlock = getSqlBlockAtCursor(editorRef.current);
-      setQuery(sqlBlock);
-      handleExecuteQuery(sqlBlock);
+
+      const editorInstance = editorRef.current;
+      const model = editorInstance.getModel();
+      const selection = editorInstance.getSelection();
+      const cursor = editorInstance.getPosition();
+
+      if (!model || !selection || !cursor) return;
+
+      const selectedText = model.getValueInRange(selection).trim();
+      const sqlToRun =
+        selectedText.length > 0
+          ? selectedText
+          : getSqlBlockAtCursor(editorInstance);
+
+      setQuery(sqlToRun);
+      handleExecuteQuery(sqlToRun);
     });
   };
 
-  const handleExecuteQuery = async (queryToRun?: string) => {
+  const handleExecuteQuery = async (queryToRun?: string, page?: number) => {
     const activeConnection = connectionRef.current;
 
     if (!activeConnection?.connection_name) {
@@ -166,8 +182,12 @@ export default function Page() {
       return;
     }
 
+    if (!page) {
+      setPageIndex(0);
+    }
+
     const finalQuery = queryToRun || query;
-    executeQuery(finalQuery, activeConnection);
+    executeQuery(finalQuery, activeConnection, page ?? pageIndex, pageSize);
   };
 
   function getSqlBlockAtCursor(
@@ -192,6 +212,11 @@ export default function Page() {
       .trim();
   }
 
+  const paginate = (page: number) => {
+    setPageIndex(page);
+    handleExecuteQuery("", page);
+  };
+
   return (
     <SidebarProvider
       style={{ "--sidebar-width": "350px" } as React.CSSProperties}
@@ -210,7 +235,7 @@ export default function Page() {
                     size="icon"
                     className="size-8"
                     disabled={!connection?.connection_name}
-                    onClick={() => handleExecuteQuery()}
+                    onClick={() => handleExecuteQuery("", 0)}
                   >
                     <Play />
                   </Button>
@@ -261,7 +286,7 @@ export default function Page() {
         </header>
 
         <div className="flex flex-col p-2 gap-2 h-[calc(100vh-64px)]">
-          <div className="min-h-[300px] border rounded-md overflow-hidden">
+          <div className="min-h-[250px] border rounded-md overflow-hidden">
             <Editor
               height="100%"
               defaultLanguage="sql"
@@ -273,14 +298,22 @@ export default function Page() {
             />
           </div>
 
-          <div className="@container/main flex flex-1 flex-col gap-2 border rounded-md">
+          <div className="@container/main flex flex-1 flex-col gap-2 border rounded-md overflow-auto">
             {loadingQuery ? (
-              <Loader2Icon className="animate-spin size-4 text-muted-foreground" />
+              <Loader2Icon className="animate-spin size-4 text-muted-foreground p-2" />
             ) : connection !== null &&
               resultQuery.length > 0 &&
               columnDefs.length > 0 ? (
               <div className="flex flex-col gap-4 py-2 p-2">
-                <DataTable columns={columnDefs} data={resultQuery} />
+                <DataTable
+                  columns={columnDefs}
+                  data={resultQuery}
+                  total={totalQueryRows}
+                  pageIndex={pageIndex}
+                  pageSize={pageSize}
+                  setPageIndex={paginate}
+                  setPageSize={setPageSize}
+                />
               </div>
             ) : (
               <p className="text-sm text-muted-foreground p-2">

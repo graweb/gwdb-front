@@ -1,34 +1,57 @@
-import { Connection } from "@/types/connection";
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
+import { Connection } from "@/types/connection";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type QueryResultRow = Record<string, any>;
 
-interface UseExecuteQueryReturn {
-  executeQuery: (query: string, connection: Connection) => Promise<void>;
-  resetQueryResult: () => void;
-  loadingQuery: boolean;
-  errorQuery: string | null;
+interface UsePaginatedQueryReturn {
   resultQuery: QueryResultRow[];
   columnsQuery: string[];
+  totalQueryRows: number;
+  loadingQuery: boolean;
+  errorQuery: string | null;
+  pageIndex: number;
+  pageSize: number;
+  setPageIndex: (index: number) => void;
+  setPageSize: (size: number) => void;
+  executeQuery: (
+    query: string,
+    connection: Connection,
+    page?: number,
+    pageSize?: number
+  ) => Promise<void>;
+  resetQueryResult: () => void;
 }
 
-export function useExecuteQuery(): UseExecuteQueryReturn {
+export function usePaginatedQuery(): UsePaginatedQueryReturn {
   const [resultQuery, setResult] = useState<QueryResultRow[]>([]);
   const [columnsQuery, setColumns] = useState<string[]>([]);
+  const [totalQueryRows, setTotal] = useState<number>(0);
   const [loadingQuery, setLoading] = useState(false);
   const [errorQuery, setError] = useState<string | null>(null);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(50);
 
-  const executeQuery = async (query: string, connection: Connection) => {
+  const executeQuery = async (
+    query: string,
+    connection: Connection,
+    page = pageIndex,
+    size = pageSize
+  ) => {
     setLoading(true);
     setError(null);
 
     try {
       const res = await fetch("/api/query", {
         method: "POST",
-        body: JSON.stringify({ query, connection }),
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query,
+          connection,
+          page: page + 1,
+          pageSize: size,
+        }),
       });
 
       const data = await res.json();
@@ -37,9 +60,9 @@ export function useExecuteQuery(): UseExecuteQueryReturn {
         const rows = Array.isArray(data.result[0])
           ? data.result[0]
           : data.result;
-
         setResult(rows);
         if (rows.length > 0) setColumns(Object.keys(rows[0]));
+        setTotal(data.total || 0);
       } else {
         setError(data.error || "Erro ao executar a consulta.");
         toast.warning(data.error || "Erro ao executar a consulta.");
@@ -55,14 +78,20 @@ export function useExecuteQuery(): UseExecuteQueryReturn {
   const resetQueryResult = useCallback(() => {
     setResult([]);
     setColumns([]);
+    setTotal(0);
   }, []);
 
   return {
-    executeQuery,
-    resetQueryResult,
-    loadingQuery,
-    errorQuery,
     resultQuery,
     columnsQuery,
+    totalQueryRows,
+    loadingQuery,
+    errorQuery,
+    pageIndex,
+    pageSize,
+    setPageIndex,
+    setPageSize,
+    executeQuery,
+    resetQueryResult,
   };
 }
