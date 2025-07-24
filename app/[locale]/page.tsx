@@ -55,11 +55,43 @@ export default function Page() {
     pageSize,
     setPageSize,
     totalQueryRows,
+    errorQuery,
   } = usePaginatedQuery();
 
   const [columnDefs, setColumnDefs] = useState<
     ColumnDef<Record<string, any>>[]
   >([]);
+
+  const executedQueryRef = useRef<{
+    text: string;
+    range: monacoType.IRange;
+  } | null>(null);
+
+  useEffect(() => {
+    const monaco = monacoRef.current;
+    const editor = editorRef.current;
+    const executedQuery = executedQueryRef.current;
+
+    if (!monaco || !editor) return;
+
+    const model = editor.getModel();
+    if (!model) return;
+
+    // Limpa os erros anteriores
+    monaco.editor.setModelMarkers(model, "sql-validator", []);
+
+    if (typeof errorQuery === "string" && executedQuery) {
+      const { range } = executedQuery;
+
+      monaco.editor.setModelMarkers(model, "sql-validator", [
+        {
+          ...range,
+          message: errorQuery,
+          severity: monaco.MarkerSeverity.Error,
+        },
+      ]);
+    }
+  }, [errorQuery]);
 
   useEffect(() => {
     setMonacoTheme(resolvedTheme === "dark" ? "vs-dark" : "vs");
@@ -212,6 +244,22 @@ export default function Page() {
           ? selectedText
           : getSqlBlockAtCursor(editorInstance);
 
+      const range =
+        selectedText.length > 0
+          ? selection
+          : {
+              startLineNumber: cursor.lineNumber,
+              endLineNumber: cursor.lineNumber,
+              startColumn: 1,
+              endColumn: model.getLineMaxColumn(cursor.lineNumber),
+            };
+
+      // Armazena a query executada e o range
+      executedQueryRef.current = {
+        text: sqlToRun,
+        range,
+      };
+
       setQuery(sqlToRun);
       handleExecuteQuery(sqlToRun);
     });
@@ -260,6 +308,40 @@ export default function Page() {
     handleExecuteQuery("", page);
   };
 
+  const executeCurrentQuery = () => {
+    if (!editorRef.current || !monacoRef.current) return;
+
+    const editor = editorRef.current;
+
+    const model = editor.getModel();
+    const selection = editor.getSelection();
+    const cursor = editor.getPosition();
+
+    if (!model || !selection || !cursor) return;
+
+    const selectedText = model.getValueInRange(selection).trim();
+    const sqlToRun =
+      selectedText.length > 0 ? selectedText : getSqlBlockAtCursor(editor);
+
+    const range =
+      selectedText.length > 0
+        ? selection
+        : {
+            startLineNumber: cursor.lineNumber,
+            endLineNumber: cursor.lineNumber,
+            startColumn: 1,
+            endColumn: model.getLineMaxColumn(cursor.lineNumber),
+          };
+
+    executedQueryRef.current = {
+      text: sqlToRun,
+      range,
+    };
+
+    setQuery(sqlToRun);
+    handleExecuteQuery(sqlToRun, 0);
+  };
+
   return (
     <SidebarProvider
       style={{ "--sidebar-width": "350px" } as React.CSSProperties}
@@ -278,7 +360,7 @@ export default function Page() {
                     size="icon"
                     className="size-8"
                     disabled={!connection?.connection_name}
-                    onClick={() => handleExecuteQuery("", 0)}
+                    onClick={executeCurrentQuery}
                   >
                     <Play />
                   </Button>
