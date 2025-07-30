@@ -21,7 +21,12 @@
     "indices": "Índices",
     "column_of": "Columna de",
     "key_word": "Palabra clave SQL",
-    "table": "Tabla"
+    "table": "Tabla",
+    "new_table_column": "Nuevo",
+    "edit_table_column": "Editar",
+    "delete_table_column": "Borrar",
+    "sql_generate": "Generar SQL",
+    "database_backup": "Respaldo"
   },
   "tooltips": {
     "new_connection": "Nueva conexión",

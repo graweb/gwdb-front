@@ -28,7 +28,8 @@ import {
   Plug,
   Edit,
   Trash2,
-  PackagePlus,
+  CopyPlus,
+  DatabaseBackup,
 } from "lucide-react";
 import { NavUser } from "@/components/nav-user";
 import { Label } from "@/components/ui/label";
@@ -217,8 +218,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       onClick={() => setIsModalOpen(true)}
                       className="px-2.5 md:px-2 cursor-pointer"
                     >
-                      <PackagePlus />
+                      <CopyPlus />
                       <span>{t("tooltips.simultaneous_connection")}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      variant="outline"
+                      tooltip={{
+                        children: t("tooltips.database_backup"),
+                        hidden: false,
+                      }}
+                      onClick={() => setIsModalOpen(true)}
+                      className="px-2.5 md:px-2 cursor-pointer"
+                    >
+                      <DatabaseBackup />
+                      <span>{t("tooltips.database_backup")}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </SidebarMenu>

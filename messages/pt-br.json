@@ -21,7 +21,11 @@
     "indices": "Índices",
     "column_of": "Coluna de",
     "key_word": "Palavra-chave SQL",
-    "table": "Tabela"
+    "table": "Tabela",
+    "new_table_column": "Nova",
+    "edit_table_column": "Editar",
+    "delete_table_column": "Deletar",
+    "sql_generate": "Gerar SQL"
   },
   "tooltips": {
     "new_connection": "Nova conexão",
@@ -35,7 +39,8 @@
     "execute_query": "Executar",
     "open_file": "Abrir arquivo",
     "my_queries": "Minhas queries",
-    "save_query": "Salvar query"
+    "save_query": "Salvar query",
+    "database_backup": "Backup"
   },
   "dialog": {
     "new_connection": {

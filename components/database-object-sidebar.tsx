@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import {
   Collapsible,
   CollapsibleTrigger,
@@ -10,8 +11,15 @@ import {
   SidebarMenuSub,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { ChevronDown } from "lucide-react";
 import React from "react";
+import { Separator } from "./ui/separator";
 
 type DatabaseObjectSideBarProps<T> = {
   icon: React.ReactNode;
@@ -30,16 +38,33 @@ export function DatabaseObjectSideBar<T>({
   getChildren,
   renderChild,
 }: DatabaseObjectSideBarProps<T>) {
+  const t = useTranslations();
+
   return (
     <SidebarMenu>
       <Collapsible className="group/collapsible">
         <SidebarMenuItem>
           <CollapsibleTrigger asChild>
             <SidebarMenuButton className="font-bold flex items-center justify-between w-full">
-              <div className="flex items-center gap-2">
-                {icon}
-                {title}
-              </div>
+              <ContextMenu>
+                <ContextMenuTrigger className="flex items-center gap-2 w-full">
+                  {icon}
+                  {title}
+                </ContextMenuTrigger>
+                <ContextMenuContent>
+                  <ContextMenuItem>
+                    {t("objects.new_table_column")}
+                  </ContextMenuItem>
+                  <ContextMenuItem>
+                    {t("objects.edit_table_column")}
+                  </ContextMenuItem>
+                  <ContextMenuItem>
+                    {t("objects.delete_table_column")}
+                  </ContextMenuItem>
+                  <Separator />
+                  <ContextMenuItem>{t("objects.sql_generate")}</ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
               <ChevronDown className="transition-transform duration-300 ease-in-out group-data-[state=open]/collapsible:rotate-180" />
             </SidebarMenuButton>
           </CollapsibleTrigger>
@@ -55,9 +80,22 @@ export function DatabaseObjectSideBar<T>({
                       <Collapsible className="group/nested">
                         <CollapsibleTrigger asChild>
                           <SidebarMenuButton className="flex items-center justify-between w-full">
-                            <div className="flex items-center gap-2">
-                              {renderItem(item, index)}
-                            </div>
+                            <ContextMenu>
+                              <ContextMenuTrigger className="flex items-center gap-2 w-full">
+                                {renderItem(item, index)}
+                              </ContextMenuTrigger>
+                              <ContextMenuContent>
+                                <ContextMenuItem>
+                                  {t("objects.new_table_column")}
+                                </ContextMenuItem>
+                                <ContextMenuItem>
+                                  {t("objects.edit_table_column")}
+                                </ContextMenuItem>
+                                <ContextMenuItem>
+                                  {t("objects.delete_table_column")}
+                                </ContextMenuItem>
+                              </ContextMenuContent>
+                            </ContextMenu>
                             <ChevronDown className="transition-transform duration-300 ease-in-out group-data-[state=open]/nested:rotate-180" />
                           </SidebarMenuButton>
                         </CollapsibleTrigger>
