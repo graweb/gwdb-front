@@ -10,7 +10,11 @@
     "connection_error": "Connection error, check if the database is started.",
     "connection_created": "Connection created successfully.",
     "connection_updated": "Connection updated successfully.",
-    "connection_error_save": "Error saving connection, please try again."
+    "connection_error_save": "Error saving connection, please try again.",
+    "connection_select": "Select at least one database",
+    "connection_all_databases_ok": "All selected databases are already registered.",
+    "connections_created": "Connections created successfully.",
+    "connection_already_exists": "This connection already exists"
   },
   "objects": {
     "tables": "Tables",
@@ -43,6 +47,38 @@
     "database_backup": "Backup"
   },
   "dialog": {
+    "label_connection_name": {
+      "label": "Connection name",
+      "placeholder": "connection"
+    },
+    "label_database": {
+      "label": "Database",
+      "placeholder": "select"
+    },
+    "label_server": {
+      "label": "Server",
+      "placeholder": "localhost"
+    },
+    "label_port": {
+      "label": "Port",
+      "placeholder": "3306"
+    },
+    "label_database_name": {
+      "label": "Database name",
+      "placeholder": "database"
+    },
+    "label_username": {
+      "label": "User",
+      "placeholder": "root"
+    },
+    "label_password": {
+      "label": "Password",
+      "placeholder": "password"
+    },
+    "file_path": {
+      "label": "SQLite file path",
+      "placeholder": "/path/to/database.db"
+    },
     "new_connection": {
       "title": {
         "new": "New connection",
@@ -55,17 +91,31 @@
         "part_1": "Do you want to remove the connection",
         "part_2": "with the database"
       }
-    }
+    },
+    "title_database_select": "Select the database",
+    "description_databases_select": "Choose one or more databases detected on the server:"
   },
   "buttons": {
     "yes": "Yes",
     "no": "No",
-    "plan_upgrade": "Upgrade to Pro"
+    "plan_upgrade": "Upgrade to Pro",
+    "close": "Close",
+    "save": "Save",
+    "update": "Update"
   },
   "datatable": {
     "filter": "Filter...",
     "page": "Page",
     "of": "of",
     "total": " - total"
+  },
+  "validations": {
+    "connection_name": "Connection name is required",
+    "connection_type": "Connection type is required",
+    "server": "Server is required",
+    "port": "Port is required",
+    "username": "Username is required",
+    "password": "Password is required",
+    "file_path": "Path is required"
   }
 }

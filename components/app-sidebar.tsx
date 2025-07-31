@@ -110,6 +110,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const submitRemoveConnection = async () => {
     await removeConnection(selectedConnection);
     setIsModalRemoveOpen(false);
+    setSelectedConnection(null);
     refetchConnections();
   };
 

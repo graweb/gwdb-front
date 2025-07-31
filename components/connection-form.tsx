@@ -19,6 +19,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectTrigger,
@@ -26,26 +27,61 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { useConnections } from "@/hooks/useConnections";
 import { Connection } from "@/types/connection";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  useReactTable,
+  getCoreRowModel,
+  ColumnDef,
+  flexRender,
+  RowSelectionState,
+} from "@tanstack/react-table";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 
 type Props = {
   onSuccess: () => void;
   connection?: Connection | null;
 };
 
+type DatabaseItem = {
+  id: string;
+  name: string;
+};
+
 export function ConnectionForm({ onSuccess, connection }: Props) {
   const t = useTranslations();
-  const { createConnection, updateConnection, loadingConnection } =
-    useConnections();
+  const [databases, setDatabases] = useState<DatabaseItem[]>([]);
+  const [isModalDatabasesOpen, setIsModalDatabasesOpen] = useState(false);
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+
+  const {
+    createConnection,
+    checkExistingDatabases,
+    updateConnection,
+    loadingConnection,
+  } = useConnections();
   const [showPassword, setShowPassword] = useState(false);
+  const { connections } = useConnections();
 
   const form = useForm<ConnectionFormValues>({
-    resolver: zodResolver(connectionFormSchema),
+    resolver: zodResolver(connectionFormSchema(t)),
     defaultValues: {
       connection_name: "",
       connection_type: "",
@@ -99,14 +135,85 @@ export function ConnectionForm({ onSuccess, connection }: Props) {
     form.setValue("port", defaultPorts[value] || connection?.port);
   };
 
+  // Colunas da tabela com checkbox para seleção
+  const columns: ColumnDef<DatabaseItem>[] = [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && "indeterminate")
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+        />
+      ),
+    },
+    {
+      accessorKey: "name",
+      header: t("dialog.label_database.label"),
+      cell: ({ row }) => <span>{row.getValue("name")}</span>,
+    },
+  ];
+
+  const table = useReactTable({
+    data: databases,
+    columns,
+    state: {
+      rowSelection,
+    },
+    onRowSelectionChange: setRowSelection,
+    getCoreRowModel: getCoreRowModel(),
+    enableRowSelection: true,
+  });
+
   const onSubmit = async (values: ConnectionFormValues) => {
     try {
       if (connection?.id) {
         await updateConnection(values, connection.id);
         toast.success(t("messages.connection_updated"));
       } else {
-        await createConnection(values);
-        toast.success(t("messages.connection_created"));
+        if (!values.database_name && selectedType !== "sqlite") {
+          const checkDatabases = await checkExistingDatabases(values);
+
+          // mapear os nomes para objetos com id e name
+          const mapped = checkDatabases.data.map((dbName: string) => ({
+            id: dbName,
+            name: dbName,
+          }));
+          setDatabases(mapped);
+          setRowSelection({}); // limpa seleção anterior
+          setIsModalDatabasesOpen(true);
+          return;
+        } else {
+          const existingConnections = connections.filter(
+            (conn) =>
+              conn.connection_type === form.getValues("connection_type") &&
+              conn.server === form.getValues("server") &&
+              String(conn.port) === String(form.getValues("port")) &&
+              conn.username === form.getValues("username")
+          );
+
+          const existingDbNames = existingConnections.map(
+            (conn) => conn.database_name
+          );
+
+          if (existingDbNames.includes(values.database_name)) {
+            toast.warning(t("messages.connection_already_exists"));
+            return;
+          }
+
+          await createConnection(values);
+          toast.success(t("messages.connection_created"));
+        }
       }
 
       onSuccess();
@@ -133,6 +240,61 @@ export function ConnectionForm({ onSuccess, connection }: Props) {
     }
   };
 
+  // Confirmar seleção dos bancos no modal
+  const handleConfirmDatabases = async () => {
+    try {
+      // bancos marcados na tabela
+      const selectedDbNames = table
+        .getSelectedRowModel()
+        .rows.map((row) => row.original.name);
+
+      if (selectedDbNames.length === 0) {
+        toast.error(t("messages.connection_select"));
+        return;
+      }
+
+      // conexões já existentes para o mesmo host/porta/usuário/tipo
+      const existingConnections = connections.filter(
+        (conn) =>
+          conn.connection_type === form.getValues("connection_type") &&
+          conn.server === form.getValues("server") &&
+          String(conn.port) === String(form.getValues("port")) &&
+          conn.username === form.getValues("username")
+      );
+
+      const existingDbNames = existingConnections.map(
+        (conn) => conn.database_name
+      );
+
+      // filtra apenas bancos que ainda NÃO existem
+      const databasesToCreate = selectedDbNames.filter(
+        (db) => !existingDbNames.includes(db)
+      );
+
+      if (databasesToCreate.length === 0) {
+        toast.warning(t("messages.connection_all_databases_ok"));
+        setIsModalDatabasesOpen(false);
+        return;
+      }
+
+      // cria as novas conexões em paralelo
+      await Promise.all(
+        databasesToCreate.map((dbName) =>
+          createConnection({
+            ...form.getValues(),
+            database_name: dbName,
+          })
+        )
+      );
+
+      toast.success(t("messages.connections_created"));
+      setIsModalDatabasesOpen(false);
+      onSuccess();
+    } catch (error) {
+      toast.error(t("messages.connection_error_save") + error);
+    }
+  };
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
@@ -141,9 +303,12 @@ export function ConnectionForm({ onSuccess, connection }: Props) {
           name="connection_name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Nome da conexão</FormLabel>
+              <FormLabel>{t("dialog.label_connection_name.label")}</FormLabel>
               <FormControl>
-                <Input placeholder="Conexão" {...field} />
+                <Input
+                  placeholder={t("dialog.label_connection_name.placeholder")}
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -154,7 +319,7 @@ export function ConnectionForm({ onSuccess, connection }: Props) {
           name="connection_type"
           render={() => (
             <FormItem>
-              <FormLabel>Banco de dados</FormLabel>
+              <FormLabel>{t("dialog.label_database.label")}</FormLabel>
               <Select
                 value={
                   form.watch("connection_type") ||
@@ -167,7 +332,9 @@ export function ConnectionForm({ onSuccess, connection }: Props) {
               >
                 <FormControl>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione" />
+                    <SelectValue
+                      placeholder={t("dialog.label_database.placeholder")}
+                    />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -189,10 +356,10 @@ export function ConnectionForm({ onSuccess, connection }: Props) {
             name="file_path"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Caminho do arquivo SQLite</FormLabel>
+                <FormLabel>{t("dialog.file_path.label")}</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="/caminho/para/database.sqlite"
+                    placeholder={t("dialog.file_path.placeholder")}
                     {...field}
                   />
                 </FormControl>
@@ -210,9 +377,12 @@ export function ConnectionForm({ onSuccess, connection }: Props) {
               name="server"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Servidor</FormLabel>
+                  <FormLabel>{t("dialog.label_server.label")}</FormLabel>
                   <FormControl>
-                    <Input placeholder="localhost" {...field} />
+                    <Input
+                      placeholder={t("dialog.label_server.placeholder")}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -223,9 +393,12 @@ export function ConnectionForm({ onSuccess, connection }: Props) {
               name="port"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Porta</FormLabel>
+                  <FormLabel>{t("dialog.label_port.label")}</FormLabel>
                   <FormControl>
-                    <Input placeholder="3306" {...field} />
+                    <Input
+                      placeholder={t("dialog.label_port.placeholder")}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -236,9 +409,12 @@ export function ConnectionForm({ onSuccess, connection }: Props) {
               name="database_name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nome do banco</FormLabel>
+                  <FormLabel>{t("dialog.label_database_name.label")}</FormLabel>
                   <FormControl>
-                    <Input placeholder="database" {...field} />
+                    <Input
+                      placeholder={t("dialog.label_database_name.placeholder")}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -249,9 +425,12 @@ export function ConnectionForm({ onSuccess, connection }: Props) {
               name="username"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Usuário</FormLabel>
+                  <FormLabel>{t("dialog.label_username.label")}</FormLabel>
                   <FormControl>
-                    <Input placeholder="root" {...field} />
+                    <Input
+                      placeholder={t("dialog.label_username.placeholder")}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -263,12 +442,16 @@ export function ConnectionForm({ onSuccess, connection }: Props) {
               render={({ field }) => {
                 return (
                   <FormItem>
-                    <FormLabel>Senha</FormLabel>
+                    <FormLabel>{t("dialog.label_password.label")}</FormLabel>
                     <div className="relative">
                       <FormControl>
                         <Input
                           {...field}
-                          type={showPassword ? "text" : "password"}
+                          type={
+                            showPassword
+                              ? "text"
+                              : t("dialog.label_password.placeholder")
+                          }
                           placeholder="*******"
                           className="pr-10"
                         />
@@ -296,17 +479,88 @@ export function ConnectionForm({ onSuccess, connection }: Props) {
         <DialogFooter className="mt-4">
           <DialogClose asChild>
             <Button variant="outline" disabled={loadingConnection}>
-              Fechar
+              {t("buttons.close")}
             </Button>
           </DialogClose>
           <Button type="submit" disabled={loadingConnection}>
             {loadingConnection && (
               <Loader2Icon className="animate-spin mr-2 size-4" />
             )}
-            {connection?.id ? "Atualizar" : "Salvar"}
+            {connection?.id ? t("buttons.update") : t("buttons.save")}
           </Button>
         </DialogFooter>
       </form>
+
+      <Dialog
+        open={isModalDatabasesOpen}
+        onOpenChange={setIsModalDatabasesOpen}
+      >
+        <DialogContent
+          className="max-w-lg"
+          onInteractOutside={(event) => {
+            event.preventDefault();
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>{t("dialog.title_database_select")}</DialogTitle>
+            <DialogDescription className="text-red-800 font-bold">
+              {t("dialog.description_databases_select")}
+            </DialogDescription>
+          </DialogHeader>
+
+          {databases.length > 0 ? (
+            <div className="overflow-x-auto max-h-80">
+              <Table>
+                <TableHeader>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <TableHead key={header.id}>
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() ? "selected" : undefined}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <p>{t("messages.no_results")}</p>
+          )}
+
+          <DialogFooter>
+            <Button
+              onClick={handleConfirmDatabases}
+              disabled={loadingConnection}
+            >
+              {loadingConnection && (
+                <Loader2Icon className="animate-spin mr-2 size-4" />
+              )}
+              {t("buttons.save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Form>
   );
 }

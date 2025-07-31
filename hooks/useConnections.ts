@@ -67,6 +67,48 @@ export function useConnections() {
     }
   }
 
+  async function checkExistingDatabases(data: {
+    connection_name: string;
+    connection_type: string;
+    server?: string;
+    port?: string;
+    database_name?: string;
+    username?: string;
+    password?: string;
+    file_path?: string;
+  }) {
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      const res = await fetch("/api/check_databases", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!res.ok) {
+        throw new Error("Erro ao listar bancos de dados.");
+      }
+
+      const databases = await res.json();
+      setSuccess(true);
+      return databases;
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Erro desconhecido");
+      }
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function updateConnection(
     data: {
       connection_name: string;
@@ -157,6 +199,7 @@ export function useConnections() {
     errorConnection,
     success,
     createConnection,
+    checkExistingDatabases,
     updateConnection,
     removeConnection,
     refetchConnections: fetchConnections,

@@ -10,7 +10,11 @@
     "connection_error": "Error de conexión. Comprobar si la base de datos está iniciada.",
     "connection_created": "Conexión creada correctamente.",
     "connection_updated": "Conexión actualizada correctamente.",
-    "connection_error_save": "Error al guardar la conexión, inténtelo de nuevo."
+    "connection_error_save": "Error al guardar la conexión, inténtelo de nuevo.",
+    "connection_select": "Seleccionar al menos una base de datos",
+    "connection_all_databases_ok": "Todas las bases de datos seleccionadas ya están registradas.",
+    "connections_created": "Conexiones creadas correctamente.",
+    "connection_already_exists": "Esta conexión ya existe"
   },
   "objects": {
     "tables": "Tablas",
@@ -43,6 +47,38 @@
     "save_query": "Guardar consulta"
   },
   "dialog": {
+    "label_connection_name": {
+      "label": "Nombre de la conexión",
+      "placeholder": "conexión"
+    },
+    "label_database": {
+      "label": "Base de datos",
+      "placeholder": "seleccionar"
+    },
+    "label_server": {
+      "label": "Servidor",
+      "placeholder": "localhost"
+    },
+    "label_port": {
+      "label": "Puerto",
+      "placeholder": "3306"
+    },
+    "label_database_name": {
+      "label": "Nombre de la base de datos",
+      "placeholder": "base de datos"
+    },
+    "label_username": {
+      "label": "Usuario",
+      "placeholder": "root"
+    },
+    "label_password": {
+      "label": "Contraseña",
+      "placeholder": "contraseña"
+    },
+    "file_path": {
+      "label": "Ruta del archivo SQLite",
+      "placeholder": "/path/to/database.db"
+    },
     "new_connection": {
       "title": {
         "new": "Nueva conexión",
@@ -55,17 +91,31 @@
         "part_1": "¿Desea eliminar la conexión?",
         "part_2": "con la base de datos"
       }
-    }
+    },
+    "title_database_select": "Seleccionar la base de datos",
+    "description_databases_select": "Elegir una o más bases de datos detectadas en el servidor:"
   },
   "buttons": {
     "yes": "Sí",
     "no": "No",
-    "plan_upgrade": "Actualizar a Pro"
+    "plan_upgrade": "Actualizar a Pro",
+    "close": "Cerrar",
+    "save": "Guardar",
+    "update": "Actualizar"
   },
   "datatable": {
     "filter": "Filtro...",
     "page": "Página",
     "of": "de",
     "total": " - total"
+  },
+  "validations": {
+    "connection_name": "Se requiere el nombre de la conexión",
+    "connection_type": "Se requiere el tipo de conexión",
+    "server": "Se requiere el servidor",
+    "port": "Se requiere el puerto",
+    "username": "Se requiere el nombre de usuario",
+    "password": "Se requiere la contraseña",
+    "file_path": "Se requiere la ruta"
   }
 }
