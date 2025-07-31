@@ -365,7 +365,7 @@ export default function Page() {
                     <Play />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>{t("tooltips.connect")}</TooltipContent>
+                <TooltipContent>{t("tooltips.execute_query")}</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>

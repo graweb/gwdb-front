@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
 
       case "mssql":
         const sqlResult = await db.raw(`SELECT name FROM sys.databases`);
-        databases = sqlResult.recordset.map((row: any) => row.name);
+        databases = sqlResult.map((row: any) => row.name);
         break;
     }
 
