@@ -4,7 +4,7 @@
 import { useTranslations } from "next-intl";
 import React, { useState } from "react";
 import { useTheme } from "next-themes";
-import { useActiveConnection } from "@/hooks/useActiveConnection";
+import { useActiveConnections } from "@/hooks/useActiveConnections";
 import { useDatabaseObjects } from "@/hooks/useDatabaseObjects";
 import { toast } from "sonner";
 import {
@@ -49,10 +49,12 @@ import {
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogClose,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -65,8 +67,24 @@ import {
 import { useConnections } from "@/hooks/useConnections";
 import { DatabaseObjectSideBar } from "./database-object-sidebar";
 import { Connection } from "@/types/connection";
+import {
+  useReactTable,
+  getCoreRowModel,
+  ColumnDef,
+  flexRender,
+  RowSelectionState,
+} from "@tanstack/react-table";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import { Separator } from "./ui/separator";
 
-// This is sample data
+// Sample user data
 const data = {
   user: {
     name: "shadcn",
@@ -84,16 +102,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     removeConnection,
     refetchConnections,
   } = useConnections();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [
+    isModalSimultaneousConnectionOpen,
+    setIsModalSimultaneousConnectionOpen,
+  ] = useState(false);
   const { theme, setTheme } = useTheme();
-  const { objects, loadingObjects, errorObjects, resetObjects } =
-    useDatabaseObjects();
-  const { connection, setConnection, resetActiveConnection } =
-    useActiveConnection();
+  const { objects, loadingObjects, errorObjects } = useDatabaseObjects();
+  const { activeConnections, setActiveConnections, removeActiveConnections } =
+    useActiveConnections();
   const [isModalRemoveOpen, setIsModalRemoveOpen] = useState(false);
   const [selectedConnection, setSelectedConnection] =
     useState<Connection | null>(null);
   const [loadingOpenConnection, setLoadingOpenConnection] = useState(false);
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
   const handleModal = (conn: Connection, type: string) => {
     setSelectedConnection(conn);
@@ -117,7 +140,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const connectDatabase = async (conn: Connection) => {
     try {
       await testConnection(conn);
-      setConnection(conn);
+      setActiveConnections([conn]);
       toast.success(
         `${t("messages.database_connected")} ${conn.database_name}`
       );
@@ -136,7 +159,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       const res = await fetch("/api/objects", {
         method: "POST",
-        body: JSON.stringify({ connection: conn }),
+        body: JSON.stringify({ connections: [conn] }),
         headers: {
           "Content-Type": "application/json",
         },
@@ -159,15 +182,91 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
   }
 
+  // Colunas da tabela com checkbox para seleção
+  const columns: ColumnDef<Connection>[] = [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && "indeterminate")
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+        />
+      ),
+    },
+    {
+      accessorKey: "connection_name",
+      header: t("dialog.label_database.label"),
+      cell: ({ row }) => <span>{row.getValue("connection_name")}</span>,
+    },
+  ];
+
+  const table = useReactTable({
+    data: connections,
+    columns,
+    state: {
+      rowSelection,
+    },
+    onRowSelectionChange: setRowSelection,
+    getCoreRowModel: getCoreRowModel(),
+    enableRowSelection: true,
+  });
+
+  const handleAddConnection = async () => {
+    try {
+      // Conexões marcadas na tabela (selecionadas)
+      const selectConnection = table
+        .getSelectedRowModel()
+        .rows.map((row) => row.original);
+
+      // Filtrar as conexões selecionadas que ainda NÃO estão ativas
+      const newConnections = selectConnection.filter(
+        (selected) =>
+          !activeConnections.some((active) => active.id === selected.id)
+      );
+
+      if (newConnections.length === 0) {
+        toast.warning("Essas conexões já estão ativas.");
+        return;
+      }
+
+      // Testa cada conexão antes de adicionar, para garantir que está ok
+      for (const conn of newConnections) {
+        try {
+          await testConnection(conn);
+        } catch {
+          toast.error(`Erro ao conectar: ${conn.connection_name}`);
+          return;
+        }
+      }
+
+      // Adicionar as novas conexões ao estado, mantendo as antigas
+      setActiveConnections([...activeConnections, ...newConnections]);
+
+      toast.success("Conexões adicionadas com sucesso!");
+      setIsModalSimultaneousConnectionOpen(false);
+    } catch (error) {
+      toast.error(t("messages.connection_error_save") + error);
+    }
+  };
+
   return (
     <Sidebar
       collapsible="icon"
       className="overflow-hidden *:data-[sidebar=sidebar]:flex-row"
       {...props}
     >
-      {/* This is the first sidebar */}
-      {/* We disable collapsible and adjust width to icon. */}
-      {/* This will make the sidebar appear as icons. */}
+      {/* Sidebar Icon Narrow */}
       <Sidebar
         collapsible="none"
         className="w-[calc(var(--sidebar-width-icon)+1px)]! border-r"
@@ -207,7 +306,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
-              {connection?.id && (
+
+              {activeConnections.length > 0 && (
                 <SidebarMenu>
                   <SidebarMenuItem>
                     <SidebarMenuButton
@@ -216,7 +316,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         children: t("tooltips.simultaneous_connection"),
                         hidden: false,
                       }}
-                      onClick={() => setIsModalOpen(true)}
+                      onClick={() => setIsModalSimultaneousConnectionOpen(true)}
                       className="px-2.5 md:px-2 cursor-pointer"
                     >
                       <CopyPlus />
@@ -243,15 +343,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        {
-          <SidebarFooter>
-            <NavUser user={data.user} />
-          </SidebarFooter>
-        }
+        <SidebarFooter>
+          <NavUser user={data.user} />
+        </SidebarFooter>
       </Sidebar>
 
-      {/* This is the second sidebar */}
-      {/* We disable collapsible and let it fill remaining space */}
+      {/* Main Sidebar */}
       <Sidebar collapsible="none" className="hidden flex-1 md:flex">
         <SidebarHeader className="gap-3.5 border-b p-2">
           <div className="flex w-full items-center justify-between">
@@ -280,6 +377,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </div>
           <SidebarInput placeholder="Type to search..." />
         </SidebarHeader>
+
         <SidebarContent>
           <SidebarGroup className="px-0">
             <SidebarGroupContent>
@@ -289,196 +387,219 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </div>
               )}
 
-              {connection ? (
-                // Exibe objetos do banco
+              {activeConnections.length > 0 ? (
                 <>
+                  {/* Loader geral - pode ser um overlay, ou simples indicador */}
                   {loadingObjects && (
                     <div className="flex justify-center py-4">
                       <Loader2Icon className="animate-spin size-4 text-muted-foreground" />
                     </div>
                   )}
 
-                  {errorObjects && (
-                    <div className="text-red-500 text-sm px-4">
-                      {errorObjects}
-                    </div>
-                  )}
+                  {/*
+                    Listagem por conexão
+                    Usamos .map e retornamos o JSX, evitando usar lógica condicional que não retorna nada
+                  */}
+                  {activeConnections.map((conn) => {
+                    const connectionId = conn.id;
+                    const hasError = errorObjects?.[connectionId];
+                    const dbObjects = objects?.[connectionId];
 
-                  {!loadingObjects && objects && (
-                    <>
-                      {/* Database */}
-                      <SidebarGroupLabel className="font-bold flex items-center justify-between w-full mb-2">
-                        <div className="flex items-center gap-2">
-                          {connection?.connection_name}
-                        </div>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="size-8 cursor-pointer"
-                              onClick={() => {
-                                resetObjects();
-                                setConnection(null);
-                                refetchConnections();
-                                resetActiveConnection();
-                              }}
-                            >
-                              <Unplug />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {t("tooltips.disconnect")}
-                          </TooltipContent>
-                        </Tooltip>
-                      </SidebarGroupLabel>
+                    return (
+                      <React.Fragment key={connectionId}>
+                        {hasError && (
+                          <div className="text-red-500 text-sm px-4 mb-2">
+                            {hasError}
+                          </div>
+                        )}
 
-                      {/* Tables */}
-                      <DatabaseObjectSideBar
-                        icon={<Table2 className="size-5" />}
-                        title={t("objects.tables")}
-                        items={objects.tables ?? []}
-                        renderItem={(t) => (
+                        {!hasError && !loadingObjects && dbObjects && (
                           <>
-                            <TableProperties className="size-4" />
-                            {t.TABLE_NAME.length > 20 ? (
+                            {/* Database Label */}
+                            <SidebarGroupLabel className="font-bold flex items-center justify-between w-full mb-2">
+                              <div className="flex items-center gap-2">
+                                {conn.connection_name}
+                              </div>
+
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <span className="max-w-[180px] truncate inline-block cursor-default">
-                                    {t.TABLE_NAME.slice(0, 20)}...
-                                  </span>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="size-8 cursor-pointer"
+                                    onClick={() =>
+                                      removeActiveConnections(connectionId)
+                                    }
+                                  >
+                                    <Unplug />
+                                  </Button>
                                 </TooltipTrigger>
-                                <TooltipContent>{t.TABLE_NAME}</TooltipContent>
+                                <TooltipContent>
+                                  {t("tooltips.disconnect")}
+                                </TooltipContent>
                               </Tooltip>
-                            ) : (
-                              <span>{t.TABLE_NAME}</span>
+                            </SidebarGroupLabel>
+
+                            {/* Tables */}
+                            <DatabaseObjectSideBar
+                              icon={<Table2 className="size-5" />}
+                              title={t("objects.tables")}
+                              items={dbObjects.tables ?? []}
+                              renderItem={(t) => (
+                                <>
+                                  <TableProperties className="size-4" />
+                                  {t.TABLE_NAME.length > 20 ? (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className="max-w-[180px] truncate inline-block cursor-default">
+                                          {t.TABLE_NAME.slice(0, 20)}...
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        {t.TABLE_NAME}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  ) : (
+                                    <span>{t.TABLE_NAME}</span>
+                                  )}
+                                </>
+                              )}
+                              getChildren={(t) =>
+                                t.COLUMNS?.map((c) => {
+                                  const length =
+                                    c.length !== undefined
+                                      ? `(${c.length})`
+                                      : c.precision !== undefined &&
+                                        c.scale !== undefined
+                                      ? `(${c.precision},${c.scale})`
+                                      : "";
+
+                                  const fullText = `${c.name} - ${c.type}${length}`;
+                                  const displayText =
+                                    fullText.length > 30
+                                      ? `${fullText.slice(0, 30)}...`
+                                      : fullText;
+
+                                  return { fullText, displayText };
+                                }) ?? []
+                              }
+                              renderChild={(ch: any) =>
+                                ch.fullText.length > 30 ? (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="max-w-[220px] truncate inline-block cursor-default">
+                                        {ch.displayText}
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      {ch.fullText}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                ) : (
+                                  <span>{ch.fullText}</span>
+                                )
+                              }
+                            />
+
+                            {/* Views */}
+                            <DatabaseObjectSideBar
+                              icon={<ScanEye className="size-5" />}
+                              title={t("objects.views")}
+                              items={dbObjects.views ?? []}
+                              renderItem={(t) => (
+                                <SidebarMenuButton>
+                                  <Eye />
+                                  {t.VIEW_NAME.length > 20
+                                    ? `${t.VIEW_NAME.slice(0, 20)}...`
+                                    : t.VIEW_NAME}
+                                </SidebarMenuButton>
+                              )}
+                            />
+
+                            {/* Procedures */}
+                            <DatabaseObjectSideBar
+                              icon={<Workflow className="size-5" />}
+                              title={t("objects.procedures")}
+                              items={dbObjects.procedures ?? []}
+                              renderItem={(t) => (
+                                <SidebarMenuButton>
+                                  <ListStart />
+                                  {t.ROUTINE_NAME.length > 20
+                                    ? `${t.ROUTINE_NAME.slice(0, 20)}...`
+                                    : t.ROUTINE_NAME}
+                                </SidebarMenuButton>
+                              )}
+                            />
+
+                            {/* Triggers */}
+                            <DatabaseObjectSideBar
+                              icon={<Waypoints className="size-5" />}
+                              title={t("objects.triggers")}
+                              items={dbObjects.triggers ?? []}
+                              renderItem={(t) => (
+                                <SidebarMenuButton>
+                                  <Activity />
+                                  {t.TRIGGER_NAME.length > 20
+                                    ? `${t.TRIGGER_NAME.slice(0, 20)}...`
+                                    : t.TRIGGER_NAME}
+                                </SidebarMenuButton>
+                              )}
+                            />
+
+                            {/* Events */}
+                            <DatabaseObjectSideBar
+                              icon={<FileScan className="size-5" />}
+                              title={t("objects.events")}
+                              items={dbObjects.events ?? []}
+                              renderItem={(t) => (
+                                <SidebarMenuButton>
+                                  <FileTerminal />
+                                  {t.EVENT_NAME.length > 20
+                                    ? `${t.EVENT_NAME.slice(0, 20)}...`
+                                    : t.EVENT_NAME}
+                                </SidebarMenuButton>
+                              )}
+                            />
+
+                            {/* Indexes */}
+                            <DatabaseObjectSideBar
+                              icon={<FolderKey className="size-5" />}
+                              title={t("objects.indices")}
+                              items={dbObjects.indexes ?? []}
+                              renderItem={(t) => (
+                                <SidebarMenuButton>
+                                  <Key />
+                                  {t.INDEX_NAME.length > 20
+                                    ? `${t.INDEX_NAME.slice(0, 20)}...`
+                                    : t.INDEX_NAME}
+                                  <span className="ml-1 text-xs text-muted-foreground">
+                                    (
+                                    {t.TABLE_NAME.length > 20
+                                      ? `${t.TABLE_NAME.slice(0, 20)}...`
+                                      : t.TABLE_NAME}
+                                    )
+                                  </span>
+                                </SidebarMenuButton>
+                              )}
+                            />
+
+                            {activeConnections.length > 1 && (
+                              <Separator className="my-4" />
                             )}
                           </>
                         )}
-                        getChildren={(t) =>
-                          t.COLUMNS?.map((c) => {
-                            const length =
-                              c.length !== undefined
-                                ? `(${c.length})`
-                                : c.precision !== undefined &&
-                                  c.scale !== undefined
-                                ? `(${c.precision},${c.scale})`
-                                : "";
 
-                            const fullText = `${c.name} - ${c.type}${length}`;
-                            const displayText =
-                              fullText.length > 30
-                                ? `${fullText.slice(0, 30)}...`
-                                : fullText;
-
-                            return {
-                              fullText,
-                              displayText,
-                            };
-                          }) ?? []
-                        }
-                        renderChild={(ch: any) =>
-                          ch.fullText.length > 30 ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="max-w-[220px] truncate inline-block cursor-default">
-                                  {ch.displayText}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>{ch.fullText}</TooltipContent>
-                            </Tooltip>
-                          ) : (
-                            <span>{ch.fullText}</span>
-                          )
-                        }
-                      />
-
-                      {/* Views */}
-                      <DatabaseObjectSideBar
-                        icon={<ScanEye className="size-5" />}
-                        title={t("objects.views")}
-                        items={objects.views ?? []}
-                        renderItem={(t) => (
-                          <SidebarMenuButton>
-                            <Eye />
-                            {t.VIEW_NAME.length > 20
-                              ? `${t.VIEW_NAME.slice(0, 20)}...`
-                              : t.VIEW_NAME}
-                          </SidebarMenuButton>
+                        {/* Você pode querer colocar um loading individual por conexão aqui, se desejar */}
+                        {!dbObjects && !hasError && !loadingObjects && (
+                          <div className="text-sm text-muted-foreground px-4 py-2">
+                            {t("messages.no_connections")}
+                          </div>
                         )}
-                      />
-
-                      {/* Procedures */}
-                      <DatabaseObjectSideBar
-                        icon={<Workflow className="size-5" />}
-                        title={t("objects.procedures")}
-                        items={objects.procedures ?? []}
-                        renderItem={(t) => (
-                          <SidebarMenuButton>
-                            <ListStart />
-                            {t.ROUTINE_NAME.length > 20
-                              ? `${t.ROUTINE_NAME.slice(0, 20)}...`
-                              : t.ROUTINE_NAME}
-                          </SidebarMenuButton>
-                        )}
-                      />
-
-                      {/* Triggers */}
-                      <DatabaseObjectSideBar
-                        icon={<Waypoints className="size-5" />}
-                        title={t("objects.triggers")}
-                        items={objects.triggers ?? []}
-                        renderItem={(t) => (
-                          <SidebarMenuButton>
-                            <Activity />
-                            {t.TRIGGER_NAME.length > 20
-                              ? `${t.TRIGGER_NAME.slice(0, 20)}...`
-                              : t.TRIGGER_NAME}
-                          </SidebarMenuButton>
-                        )}
-                      />
-
-                      {/* Eventos */}
-                      <DatabaseObjectSideBar
-                        icon={<FileScan className="size-5" />}
-                        title={t("objects.events")}
-                        items={objects.events ?? []}
-                        renderItem={(t) => (
-                          <SidebarMenuButton>
-                            <FileTerminal />
-                            {t.EVENT_NAME.length > 20
-                              ? `${t.EVENT_NAME.slice(0, 20)}...`
-                              : t.EVENT_NAME}
-                          </SidebarMenuButton>
-                        )}
-                      />
-
-                      {/* Índices */}
-                      <DatabaseObjectSideBar
-                        icon={<FolderKey className="size-5" />}
-                        title={t("objects.indices")}
-                        items={objects.indexes ?? []}
-                        renderItem={(t) => (
-                          <SidebarMenuButton>
-                            <Key />
-                            {t.INDEX_NAME.length > 20
-                              ? `${t.INDEX_NAME.slice(0, 20)}...`
-                              : t.INDEX_NAME}
-                            <span className="ml-1 text-xs text-muted-foreground">
-                              (
-                              {t.TABLE_NAME.length > 20
-                                ? `${t.TABLE_NAME.slice(0, 20)}...`
-                                : t.TABLE_NAME}
-                              )
-                            </span>
-                          </SidebarMenuButton>
-                        )}
-                      />
-                    </>
-                  )}
+                      </React.Fragment>
+                    );
+                  })}
                 </>
               ) : (
-                // Exibe conexões disponíveis
                 <>
                   {!loadingConnection &&
                     !errorConnection &&
@@ -636,6 +757,84 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="bg-red-800 text-white hover:bg-red-700 hover:text-white"
             >
               {t("buttons.yes")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isModalSimultaneousConnectionOpen}
+        onOpenChange={setIsModalSimultaneousConnectionOpen}
+      >
+        <DialogContent
+          className="sm:max-w-md"
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle>
+              {t("dialog.title_simultaneous_connection")}
+            </DialogTitle>
+            <DialogDescription className="text-red-800 font-bold">
+              {t("dialog.description_simultaneous_connection")}
+            </DialogDescription>
+          </DialogHeader>
+          {connections.length > 0 ? (
+            <div className="overflow-x-auto max-h-80">
+              <Table>
+                <TableHeader>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <TableHead key={header.id}>
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() ? "selected" : undefined}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <p>{t("messages.no_results")}</p>
+          )}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={loadingOpenConnection}
+              >
+                {t("buttons.close")}
+              </Button>
+            </DialogClose>
+            <Button
+              onClick={handleAddConnection}
+              disabled={loadingOpenConnection}
+            >
+              {loadingOpenConnection && (
+                <Loader2Icon className="animate-spin mr-2 size-4" />
+              )}
+              {t("buttons.save")}
             </Button>
           </DialogFooter>
         </DialogContent>

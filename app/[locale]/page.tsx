@@ -6,7 +6,7 @@ import { useEffect, useState, useRef } from "react";
 import { useTheme } from "next-themes";
 import { Play, FileCode, Loader2Icon, Save, FileSearch } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
-import { useActiveConnection } from "@/hooks/useActiveConnection";
+import { useActiveConnections } from "@/hooks/useActiveConnections";
 import { usePaginatedQuery } from "@/hooks/useExecuteQuery";
 import { DataTable } from "@/components/data-table";
 import { ColumnDef } from "@tanstack/react-table";
@@ -28,20 +28,28 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function Page() {
   const t = useTranslations();
+  const [selectedConnectionId, setSelectedConnectionId] = useState(Number);
   const { resolvedTheme } = useTheme();
   const [monacoTheme, setMonacoTheme] = useState("vs");
   const [query, setQuery] = useState("");
-  const { connection } = useActiveConnection();
+  const { activeConnections } = useActiveConnections();
   const { objects } = useDatabaseObjects();
   const editorRef = useRef<monacoType.editor.IStandaloneCodeEditor | null>(
     null
   );
   const monacoRef = useRef<typeof monacoType | null>(null);
-  const connectionRef = useRef(connection);
-  const dialect = connection?.connection_type ?? "mysql";
+  const selectedConnectionRef = useRef(activeConnections[0] ?? null);
+  const dialect = selectedConnectionRef.current?.connection_type ?? "mysql";
   const sqlKeywords = sqlKeywordsByDialect[dialect] ?? [];
 
   const {
@@ -61,28 +69,29 @@ export default function Page() {
   const [columnDefs, setColumnDefs] = useState<
     ColumnDef<Record<string, any>>[]
   >([]);
-
   const executedQueryRef = useRef<{
     text: string;
     range: monacoType.IRange;
   } | null>(null);
 
   useEffect(() => {
+    if (activeConnections.length > 0) {
+      setSelectedConnectionId(activeConnections[0].id);
+    }
+  }, [activeConnections]);
+
+  useEffect(() => {
     const monaco = monacoRef.current;
     const editor = editorRef.current;
     const executedQuery = executedQueryRef.current;
-
     if (!monaco || !editor) return;
 
     const model = editor.getModel();
     if (!model) return;
-
-    // Limpa os erros anteriores
     monaco.editor.setModelMarkers(model, "sql-validator", []);
 
     if (typeof errorQuery === "string" && executedQuery) {
       const { range } = executedQuery;
-
       monaco.editor.setModelMarkers(model, "sql-validator", [
         {
           ...range,
@@ -111,12 +120,12 @@ export default function Page() {
   }, [columnsQuery]);
 
   useEffect(() => {
-    connectionRef.current = connection;
-  }, [connection]);
+    selectedConnectionRef.current = activeConnections[0] ?? null;
+  }, [activeConnections]);
 
   useEffect(() => {
     const monaco = monacoRef.current;
-    if (!monaco || !objects?.tables) return;
+    if (!monaco || !objects[selectedConnectionId]?.tables) return;
 
     const provider = monaco.languages.registerCompletionItemProvider("sql", {
       triggerCharacters: [" ", ".", ..."_abcdefghijklmnopqrstuvwxyz".split("")],
@@ -138,19 +147,14 @@ export default function Page() {
         });
 
         const suggestions: monacoType.languages.CompletionItem[] = [];
-
-        // Verifica se estamos logo após FROM
         const isAfterFrom = /\bFROM\s+[\w]*$/i.test(linesUntilCursor);
         const isAfterWhere = /\bWHERE\s+[\w]*$/i.test(linesUntilCursor);
         const isAfterJoin = /\bJOIN\s+[\w]*$/i.test(linesUntilCursor);
-
-        // Extrai a(s) tabela(s) mencionada(s) no FROM
         const fromMatch = value.match(/\bFROM\s+([a-zA-Z0-9_]+)/);
         const tableInFrom = fromMatch?.[1];
 
         if (isAfterFrom || isAfterJoin) {
-          // Apenas sugestões de tabelas
-          objects?.tables?.forEach((table) => {
+          objects[selectedConnectionId]?.tables?.forEach((table) => {
             suggestions.push({
               label: table.TABLE_NAME,
               kind: monaco.languages.CompletionItemKind.Struct,
@@ -160,7 +164,7 @@ export default function Page() {
             });
           });
         } else if (isAfterWhere && tableInFrom) {
-          const targetTable = objects?.tables?.find(
+          const targetTable = objects[selectedConnectionId]?.tables?.find(
             (t) => t.TABLE_NAME.toUpperCase() === tableInFrom.toUpperCase()
           );
 
@@ -174,7 +178,6 @@ export default function Page() {
             });
           });
         } else {
-          // Palavras-chave e funções (default)
           sqlKeywords.forEach((kw) => {
             suggestions.push({
               label: kw,
@@ -185,8 +188,7 @@ export default function Page() {
             });
           });
 
-          // E também tabelas e colunas com `table.column` opcionalmente
-          objects?.tables?.forEach((table) => {
+          objects[selectedConnectionId]?.tables?.forEach((table) => {
             suggestions.push({
               label: table.TABLE_NAME,
               kind: monaco.languages.CompletionItemKind.Struct,
@@ -215,14 +217,21 @@ export default function Page() {
   });
 
   useEffect(() => {
-    if (connection === null) {
+    if (activeConnections.length === 0) {
       setQuery("");
       resetQueryResult();
       if (editorRef.current) {
         editorRef.current.setValue(t("default_editor_text"));
       }
     }
-  }, [connection, resetQueryResult, t]);
+  }, [activeConnections, resetQueryResult, t]);
+
+  useEffect(() => {
+    const conn = activeConnections.find((c) => c.id === selectedConnectionId);
+    if (conn) {
+      selectedConnectionRef.current = conn;
+    }
+  }, [selectedConnectionId, activeConnections]);
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
@@ -254,7 +263,6 @@ export default function Page() {
               endColumn: model.getLineMaxColumn(cursor.lineNumber),
             };
 
-      // Armazena a query executada e o range
       executedQueryRef.current = {
         text: sqlToRun,
         range,
@@ -266,19 +274,19 @@ export default function Page() {
   };
 
   const handleExecuteQuery = async (queryToRun?: string, page?: number) => {
-    const activeConnection = connectionRef.current;
+    const connection =
+      activeConnections.find((c) => c.id === selectedConnectionId) ??
+      selectedConnectionRef.current;
 
-    if (!activeConnection?.connection_name) {
+    if (!connection?.connection_name) {
       toast.warning(t("messages.connection_not_selected"));
       return;
     }
 
-    if (!page) {
-      setPageIndex(0);
-    }
+    if (!page) setPageIndex(0);
 
     const finalQuery = queryToRun || query;
-    executeQuery(finalQuery, activeConnection, page ?? pageIndex, pageSize);
+    executeQuery(finalQuery, connection, page ?? pageIndex, pageSize);
   };
 
   function getSqlBlockAtCursor(
@@ -312,7 +320,6 @@ export default function Page() {
     if (!editorRef.current || !monacoRef.current) return;
 
     const editor = editorRef.current;
-
     const model = editor.getModel();
     const selection = editor.getSelection();
     const cursor = editor.getPosition();
@@ -353,13 +360,30 @@ export default function Page() {
           <Separator orientation="vertical" className="mr-2 h-4" />
           <Breadcrumb>
             <BreadcrumbList>
+              {activeConnections.length > 0 && (
+                <Select
+                  value={selectedConnectionId?.toString() || ""}
+                  onValueChange={(val) => setSelectedConnectionId(Number(val))}
+                >
+                  <SelectTrigger className="w-[250px]">
+                    <SelectValue placeholder="Selecione a conexão" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activeConnections.map((conn) => (
+                      <SelectItem key={conn.id} value={conn.id.toString()}>
+                        {conn.connection_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     variant="outline"
                     size="icon"
                     className="size-8"
-                    disabled={!connection?.connection_name}
+                    disabled={activeConnections.length === 0}
                     onClick={executeCurrentQuery}
                   >
                     <Play />
@@ -367,45 +391,25 @@ export default function Page() {
                 </TooltipTrigger>
                 <TooltipContent>{t("tooltips.execute_query")}</TooltipContent>
               </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="size-8"
-                    disabled={!connection?.connection_name}
-                  >
-                    <FileCode />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t("tooltips.open_file")}</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="size-8"
-                    disabled={!connection?.connection_name}
-                  >
-                    <FileSearch />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t("tooltips.my_queries")}</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="size-8"
-                    disabled={!connection?.connection_name}
-                  >
-                    <Save />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t("tooltips.save_query")}</TooltipContent>
-              </Tooltip>
+              {[FileCode, FileSearch, Save].map((Icon, i) => (
+                <Tooltip key={i}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="size-8"
+                      disabled={activeConnections.length === 0}
+                    >
+                      <Icon />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t(
+                      `tooltips.${["open_file", "my_queries", "save_query"][i]}`
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              ))}
             </BreadcrumbList>
           </Breadcrumb>
         </header>
@@ -426,7 +430,7 @@ export default function Page() {
           <div className="@container/main flex flex-1 flex-col gap-2 border rounded-md overflow-auto">
             {loadingQuery ? (
               <Loader2Icon className="animate-spin size-4 text-muted-foreground p-2" />
-            ) : connection !== null &&
+            ) : activeConnections.length > 0 &&
               resultQuery.length > 0 &&
               columnDefs.length > 0 ? (
               <div className="flex flex-col gap-4 py-2 p-2">

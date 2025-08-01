@@ -93,7 +93,9 @@
       }
     },
     "title_database_select": "Selecione o banco de dados",
-    "description_databases_select": "Escolha um ou mais bancos detectados no servidor:"
+    "description_databases_select": "Escolha um ou mais bancos detectados no servidor:",
+    "title_simultaneous_connection": "Conexão simultânea",
+    "description_simultaneous_connection": "Escolha uma ou mais conexões:"
   },
   "buttons": {
     "yes": "Sim",

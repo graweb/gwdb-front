@@ -1,49 +1,74 @@
-import { useActiveConnection } from "@/hooks/useActiveConnection";
+import { useActiveConnections } from "@/hooks/useActiveConnections";
 import { DatabaseObjects } from "@/types/database-objects";
 import { useEffect, useState } from "react";
 
+type ObjectsState = {
+  [connectionId: number]: DatabaseObjects | null;
+};
+
+type ErrorState = {
+  [connectionId: number]: string | null;
+};
+
 export function useDatabaseObjects() {
-  const { connection } = useActiveConnection();
-  const [objects, setObjects] = useState<DatabaseObjects | null>(null);
-  const [loadingObjects, setLoading] = useState(false);
-  const [errorObjects, setError] = useState<string | null>(null);
+  const { activeConnections } = useActiveConnections();
+
+  const [objects, setObjects] = useState<ObjectsState>({});
+  const [loadingObjects, setLoading] = useState(Boolean);
+  const [errorObjects, setError] = useState<ErrorState>({});
 
   useEffect(() => {
-    async function fetchObjects() {
-      if (!connection) return;
-
+    const fetchAllObjects = async () => {
       setLoading(true);
-      setError(null);
+      setError({});
+      const allObjects: ObjectsState = {};
 
-      try {
-        const res = await fetch("/api/objects", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ connection }),
-        });
-        const json = await res.json();
-        if (!json.success) throw new Error(json.error);
-        setObjects(json.data);
-      } catch (err: unknown) {
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError("Erro desconhecido");
+      for (const conn of activeConnections) {
+        setError((prev) => ({ ...prev, [conn.id]: null }));
+
+        try {
+          const res = await fetch("/api/objects", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ connections: [conn] }),
+          });
+
+          const json = await res.json();
+
+          if (!json.success) throw new Error(json.error);
+
+          Object.assign(allObjects, json.data);
+        } catch (err: unknown) {
+          const errorMsg =
+            err instanceof Error ? err.message : "Erro desconhecido";
+          setError((prev) => ({ ...prev, [conn.id]: errorMsg }));
         }
-      } finally {
-        setLoading(false);
       }
-    }
 
-    fetchObjects();
-  }, [connection]);
+      setObjects(allObjects);
+      setLoading(false);
+    };
+
+    if (Array.isArray(activeConnections) && activeConnections.length > 0) {
+      fetchAllObjects();
+    } else {
+      setObjects({});
+      setError({});
+      setLoading(false);
+    }
+  }, [activeConnections]);
 
   const resetObjects = () => {
-    setObjects(null);
-    setError(null);
+    setObjects({});
+    setError({});
   };
 
-  return { objects, loadingObjects, errorObjects, resetObjects };
+  return {
+    objects,
+    loadingObjects,
+    errorObjects,
+    resetObjects,
+  };
 }
