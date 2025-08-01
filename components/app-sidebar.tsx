@@ -509,9 +509,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                               renderItem={(t) => (
                                 <SidebarMenuButton>
                                   <Eye />
-                                  {t.VIEW_NAME.length > 20
-                                    ? `${t.VIEW_NAME.slice(0, 20)}...`
-                                    : t.VIEW_NAME}
+                                  {t.VIEW_NAME.length > 20 ? (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className="max-w-[180px] truncate inline-block cursor-default">
+                                          {t.VIEW_NAME.slice(0, 20)}...
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        {t.VIEW_NAME}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  ) : (
+                                    <span>{t.VIEW_NAME}</span>
+                                  )}
                                 </SidebarMenuButton>
                               )}
                             />
@@ -524,9 +535,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                               renderItem={(t) => (
                                 <SidebarMenuButton>
                                   <ListStart />
-                                  {t.ROUTINE_NAME.length > 20
-                                    ? `${t.ROUTINE_NAME.slice(0, 20)}...`
-                                    : t.ROUTINE_NAME}
+                                  {t.ROUTINE_NAME.length > 20 ? (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className="max-w-[180px] truncate inline-block cursor-default">
+                                          {t.ROUTINE_NAME.slice(0, 20)}...
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        {t.ROUTINE_NAME}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  ) : (
+                                    <span>{t.ROUTINE_NAME}</span>
+                                  )}
                                 </SidebarMenuButton>
                               )}
                             />
@@ -539,9 +561,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                               renderItem={(t) => (
                                 <SidebarMenuButton>
                                   <Activity />
-                                  {t.TRIGGER_NAME.length > 20
-                                    ? `${t.TRIGGER_NAME.slice(0, 20)}...`
-                                    : t.TRIGGER_NAME}
+                                  {t.TRIGGER_NAME.length > 20 ? (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className="max-w-[180px] truncate inline-block cursor-default">
+                                          {t.TRIGGER_NAME.slice(0, 20)}...
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        {t.TRIGGER_NAME}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  ) : (
+                                    <span>{t.TRIGGER_NAME}</span>
+                                  )}
                                 </SidebarMenuButton>
                               )}
                             />
@@ -554,9 +587,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                               renderItem={(t) => (
                                 <SidebarMenuButton>
                                   <FileTerminal />
-                                  {t.EVENT_NAME.length > 20
-                                    ? `${t.EVENT_NAME.slice(0, 20)}...`
-                                    : t.EVENT_NAME}
+                                  {t.EVENT_NAME.length > 20 ? (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className="max-w-[180px] truncate inline-block cursor-default">
+                                          {t.EVENT_NAME.slice(0, 20)}...
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        {t.EVENT_NAME}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  ) : (
+                                    <span>{t.EVENT_NAME}</span>
+                                  )}
                                 </SidebarMenuButton>
                               )}
                             />
@@ -566,21 +610,32 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                               icon={<FolderKey className="size-5" />}
                               title={t("objects.indices")}
                               items={dbObjects.indexes ?? []}
-                              renderItem={(t) => (
-                                <SidebarMenuButton>
-                                  <Key />
-                                  {t.INDEX_NAME.length > 20
-                                    ? `${t.INDEX_NAME.slice(0, 20)}...`
-                                    : t.INDEX_NAME}
-                                  <span className="ml-1 text-xs text-muted-foreground">
-                                    (
-                                    {t.TABLE_NAME.length > 20
-                                      ? `${t.TABLE_NAME.slice(0, 20)}...`
-                                      : t.TABLE_NAME}
-                                    )
-                                  </span>
-                                </SidebarMenuButton>
-                              )}
+                              renderItem={(t) => {
+                                const displayText = `${
+                                  t.TABLE_NAME.length > 10
+                                    ? t.TABLE_NAME.slice(0, 10) + "..."
+                                    : t.TABLE_NAME
+                                } (${
+                                  t.INDEX_NAME.length > 5
+                                    ? t.INDEX_NAME.slice(0, 5) + "..."
+                                    : t.INDEX_NAME
+                                })`;
+                                const fullText = `${t.TABLE_NAME} (${t.INDEX_NAME})`;
+
+                                return (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <SidebarMenuButton className="cursor-default">
+                                        <Key />
+                                        <span className="max-w-[300px] truncate inline-block ml-1">
+                                          {displayText}
+                                        </span>
+                                      </SidebarMenuButton>
+                                    </TooltipTrigger>
+                                    <TooltipContent>{fullText}</TooltipContent>
+                                  </Tooltip>
+                                );
+                              }}
                             />
 
                             {activeConnections.length > 1 && (
