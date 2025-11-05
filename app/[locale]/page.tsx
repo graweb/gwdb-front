@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { sqlKeywordsByDialect } from "@/lib/sql-keywords";
 import { Breadcrumb, BreadcrumbList } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
 import {
   SidebarInset,
   SidebarProvider,
@@ -51,6 +52,9 @@ export default function Page() {
   const selectedConnectionRef = useRef(activeConnections[0] ?? null);
   const dialect = selectedConnectionRef.current?.connection_type ?? "mysql";
   const sqlKeywords = sqlKeywordsByDialect[dialect] ?? [];
+  const editorContainerRef = useRef<HTMLDivElement | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const {
     executeQuery,
@@ -233,6 +237,62 @@ export default function Page() {
     }
   }, [selectedConnectionId, activeConnections]);
 
+  useEffect(() => {
+    const container = editorContainerRef.current;
+    if (!container) return;
+
+    let dragCounter = 0;
+
+    const handleDragEnter = (event: DragEvent) => {
+      event.preventDefault();
+      dragCounter++;
+      setIsDragging(true);
+    };
+
+    const handleDragLeave = (event: DragEvent) => {
+      event.preventDefault();
+      dragCounter--;
+      if (dragCounter === 0) setIsDragging(false);
+    };
+
+    const handleDragOver = (event: DragEvent) => {
+      event.preventDefault();
+      event.dataTransfer!.dropEffect = "copy";
+    };
+
+    const handleDrop = (event: DragEvent) => {
+      event.preventDefault();
+      dragCounter = 0;
+      setIsDragging(false);
+
+      const file = event.dataTransfer?.files?.[0];
+      if (!file || !file.name.endsWith(".sql")) {
+        toast.warning(t("messages.only_sql_files"));
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        editorRef.current?.setValue(content);
+        setQuery(content);
+      };
+      reader.readAsText(file);
+    };
+
+    container.addEventListener("dragenter", handleDragEnter);
+    container.addEventListener("dragleave", handleDragLeave);
+    container.addEventListener("dragover", handleDragOver);
+    container.addEventListener("drop", handleDrop);
+
+    return () => {
+      container.removeEventListener("dragenter", handleDragEnter);
+      container.removeEventListener("dragleave", handleDragLeave);
+      container.removeEventListener("dragover", handleDragOver);
+      container.removeEventListener("drop", handleDrop);
+    };
+  }, [t]);
+
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
@@ -382,7 +442,7 @@ export default function Page() {
                   <Button
                     variant="outline"
                     size="icon"
-                    className="size-8"
+                    className="size-8 cursor-pointer"
                     disabled={activeConnections.length === 0}
                     onClick={executeCurrentQuery}
                   >
@@ -391,31 +451,87 @@ export default function Page() {
                 </TooltipTrigger>
                 <TooltipContent>{t("tooltips.execute_query")}</TooltipContent>
               </Tooltip>
-              {[FileCode, FileSearch, Save].map((Icon, i) => (
-                <Tooltip key={i}>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="size-8"
-                      disabled={activeConnections.length === 0}
-                    >
-                      <Icon />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {t(
-                      `tooltips.${["open_file", "my_queries", "save_query"][i]}`
-                    )}
-                  </TooltipContent>
-                </Tooltip>
-              ))}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="size-8 cursor-pointer"
+                    disabled={activeConnections.length === 0}
+                    onClick={() => {
+                      fileInputRef.current?.click();
+                    }}
+                  >
+                    <FileCode />
+                    <Input
+                      type="file"
+                      accept=".sql"
+                      ref={fileInputRef}
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file && file.name.endsWith(".sql")) {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            const content = event.target?.result as string;
+                            editorRef.current?.setValue(content);
+                            setQuery(content);
+                          };
+                          reader.readAsText(file);
+                        } else {
+                          toast.warning(t("messages.only_sql_files"));
+                        }
+                        e.target.value = "";
+                      }}
+                    />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t("tooltips.open_file")}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="size-8 cursor-pointer"
+                    disabled={activeConnections.length === 0}
+                    onClick={() => {}}
+                  >
+                    <Save />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t("tooltips.save_query")}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="size-8 cursor-pointer"
+                    disabled={activeConnections.length === 0}
+                    onClick={() => {}}
+                  >
+                    <FileSearch />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t("tooltips.my_queries")}</TooltipContent>
+              </Tooltip>
             </BreadcrumbList>
           </Breadcrumb>
         </header>
 
         <div className="flex flex-col p-2 gap-2 h-[calc(100vh-64px)]">
-          <div className="min-h-[250px] border rounded-md overflow-hidden">
+          <div
+            className={`min-h-[250px] border rounded-md overflow-hidden relative ${
+              isDragging ? "ring-2 ring-blue-500 ring-offset-2" : ""
+            }`}
+            ref={editorContainerRef}
+          >
+            {isDragging && (
+              <div className="absolute inset-0 bg-blue-100/50 z-10 pointer-events-none flex items-center justify-center text-blue-800 font-semibold text-lg">
+                {t("messages.drop_sql_file_here")}
+              </div>
+            )}
             <Editor
               height="100%"
               defaultLanguage="sql"

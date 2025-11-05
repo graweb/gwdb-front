@@ -14,7 +14,9 @@
     "connection_select": "Select at least one database",
     "connection_all_databases_ok": "All selected databases are already registered.",
     "connections_created": "Connections created successfully.",
-    "connection_already_exists": "This connection already exists"
+    "connection_already_exists": "This connection already exists",
+    "only_sql_files": "Only .sql files are supported",
+    "drop_sql_file_here": "Drop .sql file here"
   },
   "objects": {
     "tables": "Tables",
